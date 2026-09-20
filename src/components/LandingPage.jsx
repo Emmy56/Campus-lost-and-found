@@ -7,7 +7,7 @@ export default function LandingPage({ onStartReporting, onNavigateToFind, stats 
       {/* Hero Section */}
       <section className="relative overflow-hidden pt-12 pb-20 lg:pt-20 lg:pb-28">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-          
+
           <div className="lg:col-span-7 space-y-8 text-center lg:text-left">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50 border border-blue-100 text-blue-600 text-xs font-bold">
               <Sparkles className="w-4 h-4 text-blue-600" />
@@ -15,8 +15,8 @@ export default function LandingPage({ onStartReporting, onNavigateToFind, stats 
             </div>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-gray-900 tracking-tight leading-[1.15]">
-              Lost Something on Campus? <br className="hidden sm:inline" />
-              <span className="text-blue-600">Find It Fast with AI.</span>
+              Lost something on Campus? <br className="hidden sm:inline" />
+              <span className="text-blue-600">Find it fast with CLF.</span>
             </h1>
 
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto lg:mx-0 font-medium leading-relaxed">
