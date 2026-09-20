@@ -105,13 +105,24 @@ export function useAppStore() {
   };
 
   const handleAddReport = async (itemData) => {
+    const newItem = {
+      id: 'item-' + Date.now(),
+      userId: currentUser?.id || 'guest',
+      status: 'active',
+      isFlagged: false,
+      ...itemData
+    };
+
+    // Optimistically update local items state and navigate to dashboard immediately
+    setItems(prev => [newItem, ...prev]);
+    setCurrentTab('dashboard');
+
     try {
       const payload = { ...itemData, userId: currentUser?.id || 'guest' };
       await api.createItem(payload);
-      setCurrentTab('dashboard');
       setTimeout(loadDbData, 800);
     } catch (err) {
-      console.error('[Store] Failed to save report to DB:', err);
+      console.warn('[Store] Remote API createItem warning, kept optimistic item:', err);
     }
   };
 
