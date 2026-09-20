@@ -79,20 +79,28 @@ function computeMatchScore(item1, item2) {
 // 1. Auth: Register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, matricNumber, email, role } = req.body;
+    const { name, matricNumber, email, password, role } = req.body;
     
     // Validate OAU Student email
-    if (!email.toLowerCase().endsWith('@students.oauife.edu.ng')) {
-      return res.status(400).json({ error: 'Registration is restricted to @students.oauife.edu.ng emails.' });
+    if (!email || !email.toLowerCase().endsWith('@students.oauife.edu.ng')) {
+      return res.status(400).json({ error: 'Registration is restricted to valid @students.oauife.edu.ng emails.' });
+    }
+
+    const matricUpper = (matricNumber || '').toUpperCase().trim();
+    const emailLower = email.toLowerCase().trim();
+
+    const existing = await query('SELECT * FROM users WHERE matric_number = ? OR email = ?', [matricUpper, emailLower]);
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Account with this Matric Number or Email already exists. Please Sign In.' });
     }
 
     const userId = 'user-' + Date.now();
     await run(
-      'INSERT INTO users (id, name, matric_number, student_id, email, role, is_banned) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [userId, name, matricNumber.toUpperCase(), matricNumber.toUpperCase(), email.toLowerCase(), role || 'student', false]
+      'INSERT INTO users (id, name, matric_number, student_id, email, password, role, is_banned) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [userId, name, matricUpper, matricUpper, emailLower, password || '', role || 'student', false]
     );
 
-    const user = { id: userId, name, matricNumber: matricNumber.toUpperCase(), studentId: matricNumber.toUpperCase(), email, role: role || 'student', isBanned: false };
+    const user = { id: userId, name, matricNumber: matricUpper, studentId: matricUpper, email: emailLower, role: role || 'student', isBanned: false };
     res.json(user);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -102,12 +110,15 @@ app.post('/api/auth/register', async (req, res) => {
 // 2. Auth: Login
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { matricNumber } = req.body;
-    const matricUpper = (matricNumber || '').toUpperCase();
+    const { matricNumber, password } = req.body;
+    const matricUpper = (matricNumber || '').toUpperCase().trim();
 
-    const users = await query('SELECT * FROM users WHERE matric_number = ? OR id = ?', [matricUpper, matricNumber]);
+    const users = await query('SELECT * FROM users WHERE matric_number = ? OR email = ? OR id = ?', [matricUpper, matricUpper.toLowerCase(), matricNumber]);
     if (users.length > 0) {
       const u = users[0];
+      if (u.is_banned) {
+        return res.status(403).json({ error: 'Your account has been deactivated/banned by Campus Admin.' });
+      }
       return res.json({
         id: u.id,
         name: u.name,
@@ -119,15 +130,17 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    // Auto register demo student
+    // Auto register new student in DB
     const userId = 'user-' + Date.now();
-    const demoEmail = `${matricNumber.toLowerCase().replace(/\//g, '')}@students.oauife.edu.ng`;
+    const demoEmail = `${matricUpper.toLowerCase().replace(/\//g, '')}@students.oauife.edu.ng`;
+    const role = (matricUpper === 'ADMIN' || matricUpper === 'ADMIN/OAU/001') ? 'admin' : 'student';
+
     await run(
-      'INSERT INTO users (id, name, matric_number, student_id, email, role, is_banned) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [userId, matricNumber, matricUpper, matricUpper, demoEmail, 'student', false]
+      'INSERT INTO users (id, name, matric_number, student_id, email, password, role, is_banned) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      [userId, matricUpper, matricUpper, matricUpper, demoEmail, password || '', role, false]
     );
 
-    res.json({ id: userId, name: matricNumber, matricNumber: matricUpper, studentId: matricUpper, email: demoEmail, role: 'student', isBanned: false });
+    res.json({ id: userId, name: matricUpper, matricNumber: matricUpper, studentId: matricUpper, email: demoEmail, role, isBanned: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

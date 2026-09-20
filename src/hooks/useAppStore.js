@@ -147,8 +147,24 @@ export function useAppStore() {
   };
 
   const handleLogin = async (user) => {
-    setCurrentUser(user);
-    setCurrentTab(user.role === 'admin' ? 'admin' : 'dashboard');
+    try {
+      let dbUser = null;
+      if (user.password) {
+        dbUser = await api.register(user).catch(() => api.login(user.matricNumber, user.password).catch(() => null));
+      } else {
+        dbUser = await api.login(user.matricNumber, '').catch(() => null);
+      }
+      const finalUser = dbUser || user;
+      setCurrentUser(finalUser);
+      setUsers(prev => {
+        const exists = prev.some(u => u.id === finalUser.id || u.matricNumber === finalUser.matricNumber);
+        return exists ? prev : [finalUser, ...prev];
+      });
+      setCurrentTab(finalUser.role === 'admin' ? 'admin' : 'dashboard');
+    } catch (e) {
+      setCurrentUser(user);
+      setCurrentTab(user.role === 'admin' ? 'admin' : 'dashboard');
+    }
     loadDbData();
   };
 

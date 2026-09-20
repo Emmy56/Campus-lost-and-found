@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS users (
   matric_number VARCHAR(255) UNIQUE NOT NULL,
   student_id VARCHAR(255),
   email VARCHAR(255) UNIQUE NOT NULL,
+  password VARCHAR(255),
   role VARCHAR(50) DEFAULT 'student',
   is_banned BOOLEAN DEFAULT false,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
