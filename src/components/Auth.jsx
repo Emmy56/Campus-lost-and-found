@@ -58,11 +58,11 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
       }
 
       const loggedUser = {
-        id: 'user-alex',
-        name: matricNumber.toLowerCase() === 'oau/2022/0123' || matricNumber.toLowerCase() === 'alex' ? 'Mr Alex' : matricNumber,
+        id: 'user-' + Date.now(),
+        name: matricNumber.toLowerCase() === 'student' || matricNumber.toLowerCase() === 'oau/2022/0123' ? 'OAU Student' : `Student (${matricNumber.toUpperCase()})`,
         matricNumber: matricNumber.toUpperCase(),
         studentId: matricNumber.toUpperCase(),
-        email: matricNumber.toLowerCase() === 'alex' ? 'alex@students.oauife.edu.ng' : `${matricNumber.toLowerCase().replace(/\//g, '')}@students.oauife.edu.ng`,
+        email: `${matricNumber.toLowerCase().replace(/\//g, '')}@students.oauife.edu.ng`,
         role: 'student',
         isBanned: false
       };
@@ -91,7 +91,7 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
               onClick={() => onAuthSuccess(defaultUser)}
               className="px-2.5 py-1 bg-white hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 rounded-lg transition-colors cursor-pointer"
             >
-              Student (Mr Alex)
+              Demo Student
             </button>
             <button
               type="button"
@@ -131,7 +131,7 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
                     required
                     value={fullname}
                     onChange={(e) => setFullname(e.target.value)}
-                    placeholder="e.g. Alexander Stephen"
+                    placeholder="e.g. Samuel Adebayo"
                     className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500"
                   />
                 </div>

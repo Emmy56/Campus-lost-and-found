@@ -1,9 +1,9 @@
 export const defaultUser = {
-  id: 'user-alex',
-  name: 'Mr Alex',
+  id: 'user-student',
+  name: 'OAU Student',
   matricNumber: 'OAU/2022/0123',
   studentId: 'OAU/2022/0123',
-  email: 'alex@students.oauife.edu.ng',
+  email: 'student@students.oauife.edu.ng',
   role: 'student',
   isBanned: false
 };
