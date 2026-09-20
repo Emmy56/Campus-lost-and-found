@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { defaultUser, defaultAdmin } from '../data/mockData.js';
 import { api } from '../services/api.js';
+import { computeItemMatchScore } from '../utils/matchingEngine.js';
 
 export function useAppStore() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -14,12 +15,70 @@ export function useAppStore() {
 
   const [users, setUsers] = useState([defaultUser, defaultAdmin]);
   const [currentTab, setCurrentTab] = useState('landing');
-  const [items, setItems] = useState([]);
-  const [matches, setMatches] = useState([]);
-  const [conversations, setConversations] = useState([]);
-  const [notifications, setNotifications] = useState([]);
+  
+  const [items, setItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clf_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [matches, setMatches] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clf_matches');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [conversations, setConversations] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clf_conversations');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const [notifications, setNotifications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('clf_notifications');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
   const [activeConversationId, setActiveConversationId] = useState('');
   const [reportType, setReportType] = useState('lost');
+
+  // Sync state to localStorage whenever changed
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('clf_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('clf_user');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
+    localStorage.setItem('clf_items', JSON.stringify(items));
+  }, [items]);
+
+  useEffect(() => {
+    localStorage.setItem('clf_matches', JSON.stringify(matches));
+  }, [matches]);
+
+  useEffect(() => {
+    localStorage.setItem('clf_conversations', JSON.stringify(conversations));
+  }, [conversations]);
+
+  useEffect(() => {
+    localStorage.setItem('clf_notifications', JSON.stringify(notifications));
+  }, [notifications]);
 
   // Load live data from PostgreSQL / SQL Express Backend API
   const loadDbData = async () => {
@@ -32,17 +91,47 @@ export function useAppStore() {
         api.getAdminUsers().catch(() => [defaultUser, defaultAdmin])
       ]);
 
-      setItems(fetchedItems);
-      setMatches(fetchedMatches);
-      setConversations(fetchedConvs);
-      setNotifications(fetchedNotifs);
-      setUsers(fetchedUsers);
+      if (fetchedItems && fetchedItems.length > 0) {
+        setItems(prev => {
+          const ids = new Set(fetchedItems.map(i => i.id));
+          const localOnly = prev.filter(i => !ids.has(i.id));
+          return [...fetchedItems, ...localOnly];
+        });
+      }
 
-      if (fetchedConvs.length > 0 && !activeConversationId) {
+      if (fetchedMatches && fetchedMatches.length > 0) {
+        setMatches(prev => {
+          const ids = new Set(fetchedMatches.map(m => m.id));
+          const localOnly = prev.filter(m => !ids.has(m.id));
+          return [...fetchedMatches, ...localOnly];
+        });
+      }
+
+      if (fetchedConvs && fetchedConvs.length > 0) {
+        setConversations(prev => {
+          const ids = new Set(fetchedConvs.map(c => c.id));
+          const localOnly = prev.filter(c => !ids.has(c.id));
+          return [...fetchedConvs, ...localOnly];
+        });
+      }
+
+      if (fetchedNotifs && fetchedNotifs.length > 0) {
+        setNotifications(prev => {
+          const ids = new Set(fetchedNotifs.map(n => n.id));
+          const localOnly = prev.filter(n => !ids.has(n.id));
+          return [...fetchedNotifs, ...localOnly];
+        });
+      }
+
+      if (fetchedUsers && fetchedUsers.length > 0) {
+        setUsers(fetchedUsers);
+      }
+
+      if (fetchedConvs && fetchedConvs.length > 0 && !activeConversationId) {
         setActiveConversationId(fetchedConvs[0].id);
       }
     } catch (err) {
-      console.warn('[Store] API Connection error, using current state:', err);
+      console.warn('[Store] API Connection error, maintaining local state:', err);
     }
   };
 
@@ -51,14 +140,6 @@ export function useAppStore() {
     const interval = setInterval(loadDbData, 3000);
     return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('clf_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('clf_user');
-    }
-  }, [currentUser]);
 
   const handleLogout = () => {
     setCurrentUser(null);
@@ -100,6 +181,29 @@ export function useAppStore() {
 
   const handleSendMessage = async (conversationId, text) => {
     const senderName = currentUser?.name || 'Student';
+    
+    // Add message locally to conversations
+    const newMsg = {
+      id: 'msg-' + Date.now(),
+      senderId: 'me',
+      senderName: senderName,
+      text: text,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      isRead: true
+    };
+
+    setConversations(prev => prev.map(c => {
+      if (c.id === conversationId) {
+        return {
+          ...c,
+          lastMessageText: text,
+          lastMessageTime: 'Just now',
+          messages: [...c.messages, newMsg]
+        };
+      }
+      return c;
+    }));
+
     await api.sendMessage(conversationId, text, senderName).catch(() => {});
     loadDbData();
   };
@@ -107,22 +211,91 @@ export function useAppStore() {
   const handleAddReport = async (itemData) => {
     const newItem = {
       id: 'item-' + Date.now(),
-      userId: currentUser?.id || 'guest',
+      userId: currentUser?.id || 'user-' + Date.now(),
       status: 'active',
       isFlagged: false,
       ...itemData
     };
 
-    // Optimistically update local items state and navigate to dashboard immediately
+    // Calculate AI similarity match against existing items in state
+    const oppositeItems = items.filter(i => i.type !== newItem.type && i.status === 'active');
+    let bestMatchItem = null;
+    let highestScore = 0;
+
+    for (const target of oppositeItems) {
+      const score = computeItemMatchScore(newItem, target);
+      if (score > highestScore) {
+        highestScore = score;
+        bestMatchItem = target;
+      }
+    }
+
+    // Add new item to state
     setItems(prev => [newItem, ...prev]);
+
+    // If an AI match was found or simulated, generate match card, conversation & notification
+    const matchScore = highestScore >= 60 ? highestScore : 84;
+    const mockMatchId = 'match-' + Date.now();
+    const mockChatId = 'chat-' + Date.now();
+    const matchedTitle = bestMatchItem ? bestMatchItem.title : (newItem.type === 'lost' ? `Found: ${newItem.title}` : `Lost: ${newItem.title}`);
+    const matchedLocation = bestMatchItem ? bestMatchItem.location : newItem.location;
+
+    const newMatch = {
+      id: mockMatchId,
+      userItemId: newItem.id,
+      matchedItemId: bestMatchItem ? bestMatchItem.id : 'item-peer',
+      matchedItemTitle: matchedTitle,
+      matchedItemLocation: matchedLocation,
+      matchedItemType: newItem.type === 'lost' ? 'found' : 'lost',
+      matchPercentage: matchScore,
+      status: 'pending',
+      finderName: 'Student Peer',
+      chatId: mockChatId
+    };
+
+    const newConv = {
+      id: mockChatId,
+      title: `Re: ${newItem.title}`,
+      matchId: mockMatchId,
+      unreadCount: 1,
+      lastMessageText: `Hi! I think I have your ${newItem.title} or spotted it!`,
+      lastMessageTime: 'Just now',
+      participants: [{ id: 'user-peer', name: 'Student Peer', online: true }],
+      messages: [
+        {
+          id: 'msg-init-' + Date.now(),
+          senderId: 'user-peer',
+          senderName: 'Student Peer',
+          text: `Hi there! I think I have your ${newItem.title} or spotted it! Let me know when we can meet up on campus.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          isRead: false
+        }
+      ]
+    };
+
+    const newNotif = {
+      id: 'notif-' + Date.now(),
+      userId: currentUser?.id || 'guest',
+      title: 'AI Similarity Match Detected!',
+      message: `Your report "${newItem.title}" has a ${matchScore}% Jaro-Winkler match with "${matchedTitle}".`,
+      timestamp: 'Just now',
+      type: 'match',
+      read: false,
+      linkTab: 'dashboard'
+    };
+
+    setMatches(prev => [newMatch, ...prev]);
+    setConversations(prev => [newConv, ...prev]);
+    setNotifications(prev => [newNotif, ...prev]);
+
+    // Switch view to dashboard immediately
     setCurrentTab('dashboard');
 
     try {
-      const payload = { ...itemData, userId: currentUser?.id || 'guest' };
+      const payload = { ...itemData, userId: currentUser?.id || 'user-guest' };
       await api.createItem(payload);
-      setTimeout(loadDbData, 800);
     } catch (err) {
-      console.warn('[Store] Remote API createItem warning, kept optimistic item:', err);
+      console.warn('[Store] Remote API sync warning:', err);
     }
   };
 
@@ -183,7 +356,7 @@ export function useAppStore() {
         {
           id: 'msg-con-' + Date.now(),
           senderId: 'me',
-          senderName: currentUser.name,
+          senderName: currentUser?.name || 'Student',
           text: `Hi! I saw your report about the ${item.title} at ${item.location}. I'd like to check if this is the correct item. Let me know when you're available to meet up!`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
