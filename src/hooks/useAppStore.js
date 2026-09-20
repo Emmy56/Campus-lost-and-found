@@ -6,14 +6,14 @@ export function useAppStore() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('clf_user');
-      return saved ? JSON.parse(saved) : defaultUser;
+      return saved ? JSON.parse(saved) : null;
     } catch (e) {
-      return defaultUser;
+      return null;
     }
   });
 
   const [users, setUsers] = useState([defaultUser, defaultAdmin]);
-  const [currentTab, setCurrentTab] = useState('dashboard');
+  const [currentTab, setCurrentTab] = useState('landing');
   const [items, setItems] = useState([]);
   const [matches, setMatches] = useState([]);
   const [conversations, setConversations] = useState([]);
