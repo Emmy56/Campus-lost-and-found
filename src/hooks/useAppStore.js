@@ -249,60 +249,59 @@ export function useAppStore() {
     // Add new item to state
     setItems(prev => [newItem, ...prev]);
 
-    // If an AI match was found or simulated, generate match card, conversation & notification
-    const matchScore = highestScore >= 60 ? highestScore : 84;
-    const mockMatchId = 'match-' + Date.now();
-    const mockChatId = 'chat-' + Date.now();
-    const matchedTitle = bestMatchItem ? bestMatchItem.title : (newItem.type === 'lost' ? `Found: ${newItem.title}` : `Lost: ${newItem.title}`);
-    const matchedLocation = bestMatchItem ? bestMatchItem.location : newItem.location;
+    // ONLY generate a match if an actual matching opposite item exists with score >= 60
+    if (bestMatchItem && highestScore >= 60) {
+      const mockMatchId = 'match-' + Date.now();
+      const mockChatId = 'chat-' + Date.now();
 
-    const newMatch = {
-      id: mockMatchId,
-      userItemId: newItem.id,
-      matchedItemId: bestMatchItem ? bestMatchItem.id : 'item-peer',
-      matchedItemTitle: matchedTitle,
-      matchedItemLocation: matchedLocation,
-      matchedItemType: newItem.type === 'lost' ? 'found' : 'lost',
-      matchPercentage: matchScore,
-      status: 'pending',
-      finderName: 'Student Peer',
-      chatId: mockChatId
-    };
+      const newMatch = {
+        id: mockMatchId,
+        userItemId: newItem.id,
+        matchedItemId: bestMatchItem.id,
+        matchedItemTitle: bestMatchItem.title,
+        matchedItemLocation: bestMatchItem.location,
+        matchedItemType: bestMatchItem.type,
+        matchPercentage: highestScore,
+        status: 'pending',
+        finderName: 'Student Peer',
+        chatId: mockChatId
+      };
 
-    const newConv = {
-      id: mockChatId,
-      title: `Re: ${newItem.title}`,
-      matchId: mockMatchId,
-      unreadCount: 1,
-      lastMessageText: `Hi! I think I have your ${newItem.title} or spotted it!`,
-      lastMessageTime: 'Just now',
-      participants: [{ id: 'user-peer', name: 'Student Peer', online: true }],
-      messages: [
-        {
-          id: 'msg-init-' + Date.now(),
-          senderId: 'user-peer',
-          senderName: 'Student Peer',
-          text: `Hi there! I think I have your ${newItem.title} or spotted it! Let me know when we can meet up on campus.`,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          isRead: false
-        }
-      ]
-    };
+      const newConv = {
+        id: mockChatId,
+        title: `Re: ${newItem.title}`,
+        matchId: mockMatchId,
+        unreadCount: 1,
+        lastMessageText: `Hi! I think I have your ${newItem.title} or spotted it!`,
+        lastMessageTime: 'Just now',
+        participants: [{ id: bestMatchItem.userId || 'user-peer', name: 'Student Peer', online: true }],
+        messages: [
+          {
+            id: 'msg-init-' + Date.now(),
+            senderId: 'user-peer',
+            senderName: 'Student Peer',
+            text: `Hi there! I think I have your ${newItem.title} or spotted it! Let me know when we can meet up on campus.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isRead: false
+          }
+        ]
+      };
 
-    const newNotif = {
-      id: 'notif-' + Date.now(),
-      userId: currentUser?.id || 'guest',
-      title: 'AI Similarity Match Detected!',
-      message: `Your report "${newItem.title}" has a ${matchScore}% Jaro-Winkler match with "${matchedTitle}".`,
-      timestamp: 'Just now',
-      type: 'match',
-      read: false,
-      linkTab: 'dashboard'
-    };
+      const newNotif = {
+        id: 'notif-' + Date.now(),
+        userId: currentUser?.id || 'guest',
+        title: 'AI Similarity Match Detected!',
+        message: `Your report "${newItem.title}" has a ${highestScore}% Jaro-Winkler match with "${bestMatchItem.title}".`,
+        timestamp: 'Just now',
+        type: 'match',
+        read: false,
+        linkTab: 'dashboard'
+      };
 
-    setMatches(prev => [newMatch, ...prev]);
-    setConversations(prev => [newConv, ...prev]);
-    setNotifications(prev => [newNotif, ...prev]);
+      setMatches(prev => [newMatch, ...prev]);
+      setConversations(prev => [newConv, ...prev]);
+      setNotifications(prev => [newNotif, ...prev]);
+    }
 
     // Switch view to dashboard immediately
     setCurrentTab('dashboard');

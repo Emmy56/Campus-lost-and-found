@@ -200,30 +200,38 @@ app.post('/api/items', async (req, res) => {
       }
     }
 
-    const matchScore = highestScore >= 70 ? highestScore : Math.floor(Math.random() * 15) + 78;
-    const matchedTitle = bestMatch ? bestMatch.title : (type === 'lost' ? `Found: ${title}` : `Lost: ${title}`);
-    const matchedLocation = bestMatch ? bestMatch.location : location;
+    let createdMatchId = null;
 
-    const mockMatchId = 'match-' + Date.now();
-    const mockChatId = 'chat-new-' + Date.now();
+    // Only generate a match if an actual opposite item matches with similarity >= 60%
+    if (bestMatch && highestScore >= 60) {
+      const mockMatchId = 'match-' + Date.now();
+      const mockChatId = 'chat-new-' + Date.now();
 
-    // Insert Match into database
-    await run(
-      'INSERT INTO matches (id, user_item_id, matched_item_id, matched_item_title, matched_item_location, matched_item_type, match_percentage, status, finder_name, chat_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [mockMatchId, itemId, bestMatch ? bestMatch.id : 'item-remote', matchedTitle, matchedLocation, type === 'lost' ? 'found' : 'lost', matchScore, 'pending', 'Student Peer', mockChatId]
-    );
+      await run(
+        'INSERT INTO matches (id, user_item_id, matched_item_id, matched_item_title, matched_item_location, matched_item_type, match_percentage, status, finder_name, chat_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        [mockMatchId, itemId, bestMatch.id, bestMatch.title, bestMatch.location, bestMatch.type, highestScore, 'pending', 'Student Peer', mockChatId]
+      );
 
-    // Create associated Conversation
-    await run(
-      'INSERT INTO conversations (id, title, match_id, unread_count, last_message_text, last_message_time) VALUES (?, ?, ?, ?, ?, ?)',
-      [mockChatId, `Re: ${title}`, mockMatchId, 1, `Hi there! I think I have your ${title} or spotted it!`, 'Just now']
-    );
+      await run(
+        'INSERT INTO conversations (id, title, match_id, unread_count, last_message_text, last_message_time) VALUES (?, ?, ?, ?, ?, ?)',
+        [mockChatId, `Re: ${title}`, mockMatchId, 1, `Hi there! I think I have your ${title} or spotted it!`, 'Just now']
+      );
 
-    // Insert Initial Message
-    await run(
-      'INSERT INTO messages (id, conversation_id, sender_id, sender_name, text, timestamp, is_read) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ['m-' + Date.now(), mockChatId, 'user-remote', 'Student Peer', `Hi there! I think I have your ${title} or spotted it! Let me know when we can meet up.`, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), false]
-    );
+      await run(
+        'INSERT INTO messages (id, conversation_id, sender_id, sender_name, text, timestamp, is_read) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        ['m-' + Date.now(), mockChatId, 'user-remote', 'Student Peer', `Hi there! I think I have your ${title} or spotted it! Let me know when we can meet up.`, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), false]
+      );
+
+      const notifId = 'notif-' + Date.now();
+      await run(
+        'INSERT INTO notifications (id, user_id, title, message, timestamp, type, read, link_tab) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [notifId, userId || 'guest', 'AI Similarity Match Detected!', `Your report "${title}" has a ${highestScore}% Jaro-Winkler match with "${bestMatch.title}".`, 'Just now', 'match', false, 'dashboard']
+      );
+
+      createdMatchId = mockMatchId;
+    }
+
+    res.json({ item: newItem, matchScore: highestScore, matchId: createdMatchId });
 
     // Insert Notification
     const notifId = 'notif-' + Date.now();
