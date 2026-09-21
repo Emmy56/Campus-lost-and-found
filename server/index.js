@@ -232,15 +232,6 @@ app.post('/api/items', async (req, res) => {
     }
 
     res.json({ item: newItem, matchScore: highestScore, matchId: createdMatchId });
-
-    // Insert Notification
-    const notifId = 'notif-' + Date.now();
-    await run(
-      'INSERT INTO notifications (id, user_id, title, message, timestamp, type, read, link_tab) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [notifId, userId || 'guest', 'AI Similarity Match Detected!', `Your report "${title}" has a ${matchScore}% Jaro-Winkler match with "${matchedTitle}".`, 'Just now', 'match', false, 'dashboard']
-    );
-
-    res.json({ item: newItem, matchScore, matchId: mockMatchId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
