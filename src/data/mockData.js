@@ -1,9 +1,9 @@
 export const defaultUser = {
   id: 'user-student',
   name: 'OAU Student',
-  matricNumber: 'OAU/2022/0123',
-  studentId: 'OAU/2022/0123',
-  email: 'student@students.oauife.edu.ng',
+  matricNumber: 'CSC/2022/012',
+  studentId: 'CSC/2022/012',
+  email: 'student@student.oauife.edu.ng',
   role: 'student',
   isBanned: false
 };
@@ -13,7 +13,7 @@ export const defaultAdmin = {
   name: 'OAU Admin Moderation',
   matricNumber: 'ADMIN/OAU/001',
   studentId: 'ADMIN/OAU/001',
-  email: 'admin@students.oauife.edu.ng',
+  email: 'admin@student.oauife.edu.ng',
   role: 'admin',
   isBanned: false
 };

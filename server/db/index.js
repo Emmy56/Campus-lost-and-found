@@ -84,7 +84,7 @@ export async function initDb() {
   if (existingAdmin.length === 0) {
     await run(
       'INSERT INTO users (id, name, matric_number, student_id, email, role, is_banned) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ['user-admin', 'OAU Admin Moderation', 'ADMIN/OAU/001', 'ADMIN/OAU/001', 'admin@students.oauife.edu.ng', 'admin', false]
+      ['user-admin', 'OAU Admin Moderation', 'ADMIN/OAU/001', 'ADMIN/OAU/001', 'admin@student.oauife.edu.ng', 'admin', false]
     );
   }
   

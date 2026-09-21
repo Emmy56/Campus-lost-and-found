@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Lock, User, Mail, ShieldCheck } from 'lucide-react';
 import { defaultUser, defaultAdmin } from '../data/mockData';
 
+const MATRIC_REGEX = /^[A-Za-z]{3}\/\d{4}\/\d{3}$/;
+
 export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
   const [screen, setScreen] = useState(initialScreen);
   const [fullname, setFullname] = useState('');
@@ -17,16 +19,25 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
     e.preventDefault();
     setErrorMsg('');
     
+    const cleanMatric = matricNumber.trim().toUpperCase();
+    const isSpecialAdmin = cleanMatric === 'ADMIN' || cleanMatric === 'ADMIN/OAU/001';
+
     if (screen === 'signup') {
       if (!fullname || !matricNumber || !email || !password || !confirmPassword) {
         setErrorMsg('Please fill in all required fields.');
         return;
       }
       
-      // Strict OAU Student Email Validation: ONLY @students.oauife.edu.ng
-      const isOauStudentEmail = email.toLowerCase().trim().endsWith('@students.oauife.edu.ng');
+      // Strict Matric Format Validation: XXX/0000/000
+      if (!MATRIC_REGEX.test(cleanMatric)) {
+        setErrorMsg('Matriculation Number must follow the format XXX/0000/000 (e.g. CSC/2022/012)');
+        return;
+      }
+
+      // Strict OAU Student Email Validation: ONLY @student.oauife.edu.ng
+      const isOauStudentEmail = email.toLowerCase().trim().endsWith('@student.oauife.edu.ng');
       if (!isOauStudentEmail) {
-        setErrorMsg('Registration is restricted exclusively to valid OAU student emails ending with @students.oauife.edu.ng');
+        setErrorMsg('Registration is restricted exclusively to valid OAU student emails ending with @student.oauife.edu.ng');
         return;
       }
 
@@ -38,9 +49,10 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
       const newUser = {
         id: 'user-' + Date.now(),
         name: fullname,
-        matricNumber: matricNumber.toUpperCase(),
-        studentId: matricNumber.toUpperCase(),
+        matricNumber: cleanMatric,
+        studentId: cleanMatric,
         email: email.toLowerCase().trim(),
+        password: password,
         role: 'student',
         isBanned: false
       };
@@ -52,17 +64,24 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
       }
       
       // Check if admin login credentials
-      if (matricNumber.toLowerCase() === 'admin' || matricNumber.toLowerCase() === 'admin/oau/001') {
+      if (isSpecialAdmin) {
         onAuthSuccess(defaultAdmin);
+        return;
+      }
+
+      // Validate matric format for student login
+      if (!MATRIC_REGEX.test(cleanMatric)) {
+        setErrorMsg('Matriculation Number must follow the format XXX/0000/000 (e.g. CSC/2022/012)');
         return;
       }
 
       const loggedUser = {
         id: 'user-' + Date.now(),
-        name: matricNumber.toLowerCase() === 'student' || matricNumber.toLowerCase() === 'oau/2022/0123' ? 'OAU Student' : `Student (${matricNumber.toUpperCase()})`,
-        matricNumber: matricNumber.toUpperCase(),
-        studentId: matricNumber.toUpperCase(),
-        email: `${matricNumber.toLowerCase().replace(/\//g, '')}@students.oauife.edu.ng`,
+        name: `Student (${cleanMatric})`,
+        matricNumber: cleanMatric,
+        studentId: cleanMatric,
+        password: password,
+        email: `${cleanMatric.toLowerCase().replace(/\//g, '')}@student.oauife.edu.ng`,
         role: 'student',
         isBanned: false
       };
@@ -77,7 +96,7 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
           {screen === 'signin' ? 'Sign in to Campus Lost & Found' : 'Register OAU Student Account'}
         </h2>
         <p className="text-sm text-gray-500">
-          {screen === 'signin' ? 'Access your reports, AI matches, and safe messages' : 'Restricted exclusively to OAU students (@students.oauife.edu.ng)'}
+          {screen === 'signin' ? 'Access your reports, AI matches, and safe messages' : 'Restricted exclusively to OAU students (@student.oauife.edu.ng)'}
         </p>
       </div>
 
@@ -141,7 +160,7 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
             {/* Matric Number field */}
             <div className="space-y-1">
               <label className="block text-xs font-semibold text-gray-700">
-                Matriculation Number / Student ID
+                Matriculation Number (Format: XXX/0000/000)
               </label>
               <div className="relative rounded-xl shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 font-mono text-xs font-bold select-none">
@@ -152,7 +171,7 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
                   required
                   value={matricNumber}
                   onChange={(e) => setMatricNumber(e.target.value)}
-                  placeholder="e.g. OAU/2022/0123 (or admin)"
+                  placeholder="e.g. CSC/2022/012 (or admin)"
                   className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-xs font-mono font-bold uppercase focus:outline-none focus:border-blue-500"
                 />
               </div>
@@ -162,7 +181,7 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
             {screen === 'signup' && (
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-gray-700">
-                  Student Email Address (@students.oauife.edu.ng)
+                  Student Email Address (@student.oauife.edu.ng)
                 </label>
                 <div className="relative rounded-xl shadow-sm">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -173,7 +192,7 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="yourname@students.oauife.edu.ng"
+                    placeholder="yourname@student.oauife.edu.ng"
                     className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500"
                   />
                 </div>

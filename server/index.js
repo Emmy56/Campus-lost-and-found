@@ -82,8 +82,8 @@ app.post('/api/auth/register', async (req, res) => {
     const { name, matricNumber, email, password, role } = req.body;
     
     // Validate OAU Student email
-    if (!email || !email.toLowerCase().endsWith('@students.oauife.edu.ng')) {
-      return res.status(400).json({ error: 'Registration is restricted to valid @students.oauife.edu.ng emails.' });
+    if (!email || !email.toLowerCase().endsWith('@student.oauife.edu.ng')) {
+      return res.status(400).json({ error: 'Registration is restricted to valid @student.oauife.edu.ng emails.' });
     }
 
     const matricUpper = (matricNumber || '').toUpperCase().trim();
@@ -132,7 +132,7 @@ app.post('/api/auth/login', async (req, res) => {
 
     // Auto register new student in DB
     const userId = 'user-' + Date.now();
-    const demoEmail = `${matricUpper.toLowerCase().replace(/\//g, '')}@students.oauife.edu.ng`;
+    const demoEmail = `${matricUpper.toLowerCase().replace(/\//g, '')}@student.oauife.edu.ng`;
     const role = (matricUpper === 'ADMIN' || matricUpper === 'ADMIN/OAU/001') ? 'admin' : 'student';
 
     await run(
