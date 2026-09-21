@@ -3,7 +3,15 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { query, run, initDb } from './db/index.js';
+import {
+  initFirebaseDb,
+  dbUsers,
+  dbItems,
+  dbMatches,
+  dbConversations,
+  dbMessages,
+  dbNotifications
+} from './db/firebase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,10 +28,11 @@ let dbInitPromise = null;
 async function ensureDbInit(req, res, next) {
   if (!dbInitialized) {
     if (!dbInitPromise) {
-      dbInitPromise = initDb().then(() => {
+      dbInitPromise = Promise.resolve().then(() => {
+        initFirebaseDb();
         dbInitialized = true;
       }).catch(err => {
-        console.error('[Database Init Error]:', err);
+        console.error('[Firebase Init Error]:', err);
       });
     }
     await dbInitPromise;
@@ -108,19 +117,28 @@ app.post('/api/auth/register', async (req, res) => {
     const matricUpper = (matricNumber || '').toUpperCase().trim();
     const emailLower = email.toLowerCase().trim();
 
-    const existing = await query('SELECT * FROM users WHERE matric_number = ? OR email = ?', [matricUpper, emailLower]);
-    if (existing.length > 0) {
+    const existingMatric = await dbUsers.find(matricUpper);
+    const existingEmail = await dbUsers.find(emailLower);
+
+    if (existingMatric || existingEmail) {
       return res.status(400).json({ error: 'Account with this Matric Number or Email already exists. Please Sign In.' });
     }
 
     const userId = 'user-' + Date.now();
-    await run(
-      'INSERT INTO users (id, name, matric_number, student_id, email, password, role, is_banned) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [userId, name, matricUpper, matricUpper, emailLower, password || '', role || 'student', false]
-    );
+    const newUser = {
+      id: userId,
+      name,
+      matricNumber: matricUpper,
+      studentId: matricUpper,
+      email: emailLower,
+      password: password || '',
+      role: role || 'student',
+      isBanned: false,
+      createdAt: new Date().toISOString()
+    };
 
-    const user = { id: userId, name, matricNumber: matricUpper, studentId: matricUpper, email: emailLower, role: role || 'student', isBanned: false };
-    res.json(user);
+    await dbUsers.create(newUser);
+    res.json(newUser);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -132,20 +150,20 @@ app.post('/api/auth/login', async (req, res) => {
     const { matricNumber, password } = req.body;
     const matricUpper = (matricNumber || '').toUpperCase().trim();
 
-    const users = await query('SELECT * FROM users WHERE matric_number = ? OR email = ? OR id = ?', [matricUpper, matricUpper.toLowerCase(), matricNumber]);
-    if (users.length > 0) {
-      const u = users[0];
-      if (u.is_banned) {
+    const user = await dbUsers.find(matricUpper);
+    if (user) {
+      if (user.isBanned) {
         return res.status(403).json({ error: 'Your account has been deactivated/banned by Campus Admin.' });
       }
       return res.json({
-        id: u.id,
-        name: u.name,
-        matricNumber: u.matric_number,
-        studentId: u.student_id,
-        email: u.email,
-        role: u.role,
-        isBanned: Boolean(u.is_banned)
+        id: user.id,
+        name: user.name,
+        matricNumber: user.matricNumber,
+        studentId: user.studentId || user.matricNumber,
+        email: user.email,
+        password: user.password,
+        role: user.role,
+        isBanned: Boolean(user.isBanned)
       });
     }
 
@@ -154,12 +172,20 @@ app.post('/api/auth/login', async (req, res) => {
     const demoEmail = `${matricUpper.toLowerCase().replace(/\//g, '')}@student.oauife.edu.ng`;
     const role = (matricUpper === 'ADMIN' || matricUpper === 'ADMIN/OAU/001') ? 'admin' : 'student';
 
-    await run(
-      'INSERT INTO users (id, name, matric_number, student_id, email, password, role, is_banned) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      [userId, matricUpper, matricUpper, matricUpper, demoEmail, password || '', role, false]
-    );
+    const newUser = {
+      id: userId,
+      name: matricUpper,
+      matricNumber: matricUpper,
+      studentId: matricUpper,
+      email: demoEmail,
+      password: password || '',
+      role,
+      isBanned: false,
+      createdAt: new Date().toISOString()
+    };
 
-    res.json({ id: userId, name: matricUpper, matricNumber: matricUpper, studentId: matricUpper, email: demoEmail, role, isBanned: false });
+    await dbUsers.create(newUser);
+    res.json(newUser);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -168,24 +194,7 @@ app.post('/api/auth/login', async (req, res) => {
 // 3. Get All Items
 app.get('/api/items', async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM items ORDER BY created_at DESC');
-    const items = rows.map(r => ({
-      id: r.id,
-      userId: r.user_id,
-      title: r.title,
-      type: r.type,
-      status: r.status,
-      category: r.category,
-      description: r.description,
-      location: r.location,
-      specificLocation: r.specific_location,
-      date: r.date,
-      time: r.time,
-      reward: r.reward,
-      image: r.image,
-      isFlagged: Boolean(r.is_flagged),
-      flagReason: r.flag_reason
-    }));
+    const items = await dbItems.getAll();
     res.json(items);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -198,19 +207,35 @@ app.post('/api/items', async (req, res) => {
     const { title, type, category, description, location, specificLocation, date, time, reward, image, userId } = req.body;
     const itemId = 'item-' + Date.now();
 
-    await run(
-      'INSERT INTO items (id, user_id, title, type, status, category, description, location, specific_location, date, time, reward, image, is_flagged) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      [itemId, userId || 'guest', title, type, 'active', category, description, location, specificLocation || '', date, time || '', reward || '', image || null, false]
-    );
+    const newItem = {
+      id: itemId,
+      userId: userId || 'guest',
+      title,
+      type,
+      status: 'active',
+      category,
+      description,
+      location,
+      specificLocation: specificLocation || '',
+      date,
+      time: time || '',
+      reward: reward || '',
+      image: image || null,
+      isFlagged: false,
+      flagReason: '',
+      createdAt: new Date().toISOString()
+    };
 
-    const newItem = { id: itemId, userId: userId || 'guest', title, type, status: 'active', category, description, location, specificLocation, date, time, reward, image, isFlagged: false };
+    await dbItems.create(newItem);
 
     // Run Jaro-Winkler AI Matching Engine against stored opposite items
-    const oppositeRows = await query('SELECT * FROM items WHERE type != ? AND status = ?', [type, 'active']);
+    const allItems = await dbItems.getAll();
+    const oppositeItems = allItems.filter(i => i.id !== itemId && i.type !== type && i.status === 'active');
+
     let bestMatch = null;
     let highestScore = 0;
 
-    for (const r of oppositeRows) {
+    for (const r of oppositeItems) {
       const targetItem = { title: r.title, description: r.description, location: r.location, category: r.category };
       const score = computeMatchScore(newItem, targetItem);
       if (score > highestScore) {
@@ -226,26 +251,58 @@ app.post('/api/items', async (req, res) => {
       const mockMatchId = 'match-' + Date.now();
       const mockChatId = 'chat-new-' + Date.now();
 
-      await run(
-        'INSERT INTO matches (id, user_item_id, matched_item_id, matched_item_title, matched_item_location, matched_item_type, match_percentage, status, finder_name, chat_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        [mockMatchId, itemId, bestMatch.id, bestMatch.title, bestMatch.location, bestMatch.type, highestScore, 'pending', 'Student Peer', mockChatId]
-      );
+      const newMatch = {
+        id: mockMatchId,
+        userItemId: itemId,
+        matchedItemId: bestMatch.id,
+        matchedItemTitle: bestMatch.title,
+        matchedItemLocation: bestMatch.location,
+        matchedItemType: bestMatch.type,
+        matchPercentage: highestScore,
+        status: 'pending',
+        finderName: 'Student Peer',
+        chatId: mockChatId,
+        createdAt: new Date().toISOString()
+      };
+      await dbMatches.create(newMatch);
 
-      await run(
-        'INSERT INTO conversations (id, title, match_id, unread_count, last_message_text, last_message_time) VALUES (?, ?, ?, ?, ?, ?)',
-        [mockChatId, `Re: ${title}`, mockMatchId, 1, `Hi there! I think I have your ${title} or spotted it!`, 'Just now']
-      );
+      const newConv = {
+        id: mockChatId,
+        title: `Re: ${title}`,
+        matchId: mockMatchId,
+        unreadCount: 1,
+        lastMessageText: `Hi there! I think I have your ${title} or spotted it!`,
+        lastMessageTime: 'Just now',
+        createdAt: new Date().toISOString()
+      };
+      await dbConversations.create(newConv);
 
-      await run(
-        'INSERT INTO messages (id, conversation_id, sender_id, sender_name, text, timestamp, is_read) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        ['m-' + Date.now(), mockChatId, 'user-remote', 'Student Peer', `Hi there! I think I have your ${title} or spotted it! Let me know when we can meet up.`, new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), false]
-      );
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const newMsg = {
+        id: 'm-' + Date.now(),
+        conversationId: mockChatId,
+        senderId: 'user-remote',
+        senderName: 'Student Peer',
+        text: `Hi there! I think I have your ${title} or spotted it! Let me know when we can meet up.`,
+        timestamp: timeStr,
+        isRead: false,
+        createdAt: new Date().toISOString()
+      };
+      await dbMessages.create(newMsg);
 
       const notifId = 'notif-' + Date.now();
-      await run(
-        'INSERT INTO notifications (id, user_id, title, message, timestamp, type, read, link_tab) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [notifId, userId || 'guest', 'AI Similarity Match Detected!', `Your report "${title}" has a ${highestScore}% Jaro-Winkler match with "${bestMatch.title}".`, 'Just now', 'match', false, 'dashboard']
-      );
+      const newNotif = {
+        id: notifId,
+        userId: userId || 'guest',
+        title: 'AI Similarity Match Detected!',
+        message: `Your report "${title}" has a ${highestScore}% Jaro-Winkler match with "${bestMatch.title}".`,
+        timestamp: 'Just now',
+        type: 'match',
+        read: false,
+        linkTab: 'dashboard',
+        createdAt: new Date().toISOString()
+      };
+      await dbNotifications.create(newNotif);
 
       createdMatchId = mockMatchId;
     }
@@ -259,19 +316,7 @@ app.post('/api/items', async (req, res) => {
 // 5. Get Matches
 app.get('/api/matches', async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM matches ORDER BY created_at DESC');
-    const matches = rows.map(r => ({
-      id: r.id,
-      userItemId: r.user_item_id,
-      matchedItemId: r.matched_item_id,
-      matchedItemTitle: r.matched_item_title,
-      matchedItemLocation: r.matched_item_location,
-      matchedItemType: r.matched_item_type,
-      matchPercentage: r.match_percentage,
-      status: r.status,
-      finderName: r.finder_name,
-      chatId: r.chat_id
-    }));
+    const matches = await dbMatches.getAll();
     res.json(matches);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -282,20 +327,32 @@ app.get('/api/matches', async (req, res) => {
 app.put('/api/matches/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
-    await run('UPDATE matches SET status = ? WHERE id = ?', [status, req.params.id]);
+    const matchId = req.params.id;
+    await dbMatches.update(matchId, { status });
 
-    const matches = await query('SELECT * FROM matches WHERE id = ?', [req.params.id]);
-    if (matches.length > 0) {
-      const match = matches[0];
+    const matches = await dbMatches.getAll();
+    const match = matches.find(m => m.id === matchId);
+
+    if (match) {
       const sysMsgId = 'sys-' + Date.now();
       const sysText = `[System Update]: Match has been ${status === 'confirmed' ? 'CONFIRMED' : 'REJECTED'} by the user.`;
       const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      await run(
-        'INSERT INTO messages (id, conversation_id, sender_id, sender_name, text, timestamp, is_read) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [sysMsgId, match.chat_id, 'system', 'System', sysText, timeStr, true]
-      );
-      await run('UPDATE conversations SET last_message_text = ? WHERE id = ?', [`Match ${status}.`, match.chat_id]);
+      await dbMessages.create({
+        id: sysMsgId,
+        conversationId: match.chatId,
+        senderId: 'system',
+        senderName: 'System',
+        text: sysText,
+        timestamp: timeStr,
+        isRead: true,
+        createdAt: new Date().toISOString()
+      });
+
+      await dbConversations.update(match.chatId, {
+        lastMessageText: `Match ${status}.`,
+        lastMessageTime: 'Just now'
+      });
     }
 
     res.json({ success: true, status });
@@ -307,35 +364,27 @@ app.put('/api/matches/:id/status', async (req, res) => {
 // 7. Get Conversations & Messages
 app.get('/api/conversations', async (req, res) => {
   try {
-    const convRows = await query('SELECT * FROM conversations ORDER BY created_at DESC');
-    const conversations = [];
-
-    for (const c of convRows) {
-      const msgRows = await query('SELECT * FROM messages WHERE conversation_id = ? ORDER BY created_at ASC', [c.id]);
-      const messages = msgRows.map(m => ({
+    const conversations = await dbConversations.getAll();
+    const formatted = conversations.map(c => ({
+      id: c.id,
+      title: c.title,
+      unreadCount: c.unreadCount || 0,
+      lastMessageText: c.lastMessageText || '',
+      lastMessageTime: c.lastMessageTime || '',
+      matchId: c.matchId,
+      participants: [
+        { id: 'user-peer', name: 'Student Peer', online: true }
+      ],
+      messages: (c.messages || []).map(m => ({
         id: m.id,
-        senderId: m.sender_id,
-        senderName: m.sender_name,
+        senderId: m.senderId,
+        senderName: m.senderName,
         text: m.text,
         timestamp: m.timestamp,
-        isRead: Boolean(m.is_read)
-      }));
-
-      conversations.push({
-        id: c.id,
-        title: c.title,
-        unreadCount: c.unread_count,
-        lastMessageText: c.last_message_text,
-        lastMessageTime: c.last_message_time,
-        matchId: c.match_id,
-        participants: [
-          { id: 'user-peer', name: 'Student Peer', online: true }
-        ],
-        messages
-      });
-    }
-
-    res.json(conversations);
+        isRead: Boolean(m.isRead)
+      }))
+    }));
+    res.json(formatted);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -349,15 +398,21 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsgId = 'msg-user-' + Date.now();
 
-    await run(
-      'INSERT INTO messages (id, conversation_id, sender_id, sender_name, text, timestamp, is_read) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      [userMsgId, conversationId, 'me', senderName || 'Student', text, timeStr, true]
-    );
+    await dbMessages.create({
+      id: userMsgId,
+      conversationId,
+      senderId: 'me',
+      senderName: senderName || 'Student',
+      text,
+      timestamp: timeStr,
+      isRead: true,
+      createdAt: new Date().toISOString()
+    });
 
-    await run(
-      'UPDATE conversations SET last_message_text = ?, last_message_time = ? WHERE id = ?',
-      [text, 'Just now', conversationId]
-    );
+    await dbConversations.update(conversationId, {
+      lastMessageText: text,
+      lastMessageTime: 'Just now'
+    });
 
     // Smart auto responder simulation saved to DB
     setTimeout(async () => {
@@ -374,14 +429,21 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
       const replyMsgId = 'msg-reply-' + Date.now();
       const replyTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-      await run(
-        'INSERT INTO messages (id, conversation_id, sender_id, sender_name, text, timestamp, is_read) VALUES (?, ?, ?, ?, ?, ?, ?)',
-        [replyMsgId, conversationId, 'reply', 'Student Finder', replyText, replyTime, false]
-      );
-      await run(
-        'UPDATE conversations SET last_message_text = ?, last_message_time = ? WHERE id = ?',
-        [replyText, 'Just now', conversationId]
-      );
+      await dbMessages.create({
+        id: replyMsgId,
+        conversationId,
+        senderId: 'reply',
+        senderName: 'Student Finder',
+        text: replyText,
+        timestamp: replyTime,
+        isRead: false,
+        createdAt: new Date().toISOString()
+      });
+
+      await dbConversations.update(conversationId, {
+        lastMessageText: replyText,
+        lastMessageTime: 'Just now'
+      });
     }, 1200);
 
     res.json({ success: true, messageId: userMsgId });
@@ -393,16 +455,7 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
 // 9. Get Notifications
 app.get('/api/notifications', async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM notifications ORDER BY created_at DESC');
-    const notifs = rows.map(r => ({
-      id: r.id,
-      title: r.title,
-      message: r.message,
-      timestamp: r.timestamp,
-      type: r.type,
-      read: Boolean(r.read),
-      linkTab: r.link_tab
-    }));
+    const notifs = await dbNotifications.getAll();
     res.json(notifs);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -411,7 +464,7 @@ app.get('/api/notifications', async (req, res) => {
 
 app.put('/api/notifications/read-all', async (req, res) => {
   try {
-    await run('UPDATE notifications SET read = ?', [true]);
+    await dbNotifications.markAllRead();
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -421,16 +474,7 @@ app.put('/api/notifications/read-all', async (req, res) => {
 // 10. Admin Routes
 app.get('/api/admin/users', async (req, res) => {
   try {
-    const rows = await query('SELECT * FROM users ORDER BY created_at DESC');
-    const users = rows.map(u => ({
-      id: u.id,
-      name: u.name,
-      matricNumber: u.matric_number,
-      studentId: u.student_id,
-      email: u.email,
-      role: u.role,
-      isBanned: Boolean(u.is_banned)
-    }));
+    const users = await dbUsers.getAll();
     res.json(users);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -439,10 +483,11 @@ app.get('/api/admin/users', async (req, res) => {
 
 app.put('/api/admin/users/:id/ban', async (req, res) => {
   try {
-    const users = await query('SELECT * FROM users WHERE id = ?', [req.params.id]);
-    if (users.length > 0) {
-      const newBannedState = !users[0].is_banned;
-      await run('UPDATE users SET is_banned = ? WHERE id = ?', [newBannedState, req.params.id]);
+    const userId = req.params.id;
+    const user = await dbUsers.find(userId);
+    if (user) {
+      const newBannedState = !user.isBanned;
+      await dbUsers.update(userId, { isBanned: newBannedState });
       res.json({ success: true, isBanned: newBannedState });
     } else {
       res.status(404).json({ error: 'User not found' });
@@ -455,7 +500,7 @@ app.put('/api/admin/users/:id/ban', async (req, res) => {
 app.put('/api/items/:id/flag', async (req, res) => {
   try {
     const { reason } = req.body;
-    await run('UPDATE items SET is_flagged = ?, flag_reason = ? WHERE id = ?', [true, reason || 'Flagged by user', req.params.id]);
+    await dbItems.update(req.params.id, { isFlagged: true, flagReason: reason || 'Flagged by user' });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -464,7 +509,7 @@ app.put('/api/items/:id/flag', async (req, res) => {
 
 app.put('/api/items/:id/dismiss-flag', async (req, res) => {
   try {
-    await run('UPDATE items SET is_flagged = ? WHERE id = ?', [false, req.params.id]);
+    await dbItems.update(req.params.id, { isFlagged: false });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -473,7 +518,7 @@ app.put('/api/items/:id/dismiss-flag', async (req, res) => {
 
 app.delete('/api/items/:id', async (req, res) => {
   try {
-    await run('DELETE FROM items WHERE id = ?', [req.params.id]);
+    await dbItems.delete(req.params.id);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -493,14 +538,11 @@ if (fs.existsSync(distPath)) {
 }
 
 // Start Server & Initialize Database
-initDb().then(() => {
-  if (!process.env.VERCEL) {
-    app.listen(PORT, () => {
-      console.log(`[Express Backend] Campus Lost & Found API running on http://localhost:${PORT}`);
-    });
-  }
-}).catch(err => {
-  console.error('[Express Backend] Failed to start database:', err);
-});
+initFirebaseDb();
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`[Express Backend] Campus Lost & Found API running on http://localhost:${PORT}`);
+  });
+}
 
 export default app;

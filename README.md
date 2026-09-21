@@ -1,19 +1,54 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Campus Lost & Found (OAU Edition)
 
-# Run and deploy your AI Studio app
+An AI-powered Lost & Found web platform for Obafemi Awolowo University (OAU) students, built with React, Vite, Tailwind CSS v4, Express, and Firebase Cloud Firestore.
 
-This contains everything you need to run your app locally.
-https://ai.studio/apps/81bd998c-bb22-45a1-b623-b5583dc6baa3
+---
 
-## Run Locally
+## Features
 
-**Prerequisites:**  Node.js
+- **Strict OAU Verification**: Registration requires valid `@student.oauife.edu.ng` email addresses and `XXX/0000/000` matriculation numbers.
+- **Jaro-Winkler AI Similarity Engine**: Automatic match scoring ($\ge 60\%$) between lost and found items.
+- **In-App Messaging & Notifications**: Safe peer-to-peer chat for item recovery.
+- **Admin Moderation**: Superadmin user management and item flag reviews.
+- **Firebase Firestore Database**: Cloud database persistence for multi-device sync and Vercel serverless compatibility.
 
+---
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+## Quick Start (Local Development)
+
+1. **Install Dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Start Dev Server**:
+   ```bash
+   npm run dev
+   ```
+
+3. **Start API Backend**:
+   ```bash
+   npm run server
+   ```
+
+---
+
+## Deploying to Vercel with Firebase
+
+1. **Create a Free Firebase Project**:
+   * Go to [console.firebase.google.com](https://console.firebase.google.com/) and create a project.
+   * Navigate to **Build -> Firestore Database** and click **Create Database**.
+   * Click **Add App** ($\langle/\rangle$ Web icon) to get your project configuration keys.
+
+2. **Connect to Vercel**:
+   * Push your project to GitHub.
+   * Import the repository in [Vercel](https://vercel.com).
+   * In **Project Settings -> Environment Variables**, add:
+     * `FIREBASE_API_KEY`
+     * `FIREBASE_AUTH_DOMAIN`
+     * `FIREBASE_PROJECT_ID`
+     * `FIREBASE_STORAGE_BUCKET`
+     * `FIREBASE_MESSAGING_SENDER_ID`
+     * `FIREBASE_APP_ID`
+
+3. **Deploy!** Your site will be live with full real-time database persistence.
