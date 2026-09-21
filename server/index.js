@@ -14,6 +14,25 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+let dbInitialized = false;
+let dbInitPromise = null;
+
+async function ensureDbInit(req, res, next) {
+  if (!dbInitialized) {
+    if (!dbInitPromise) {
+      dbInitPromise = initDb().then(() => {
+        dbInitialized = true;
+      }).catch(err => {
+        console.error('[Database Init Error]:', err);
+      });
+    }
+    await dbInitPromise;
+  }
+  next();
+}
+
+app.use('/api', ensureDbInit);
+
 // Jaro-Winkler Distance Algorithm in Node backend
 function jaroDistance(s1, s2) {
   if (s1 === s2) return 1.0;
