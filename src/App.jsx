@@ -5,7 +5,6 @@ import Messages from './components/Messages';
 import ReportForm from './components/ReportForm';
 import Auth from './components/Auth';
 import About from './components/About';
-import FindItem from './components/FindItem';
 import AdminPanel from './components/AdminPanel';
 import Footer from './components/Footer';
 import { useAppStore } from './hooks/useAppStore';
@@ -139,14 +138,7 @@ export default function App() {
 
           {currentTab === 'about' && <About />}
 
-          {currentTab === 'find-item' && (
-            <FindItem
-              currentUser={currentUser}
-              items={items}
-              onConnect={handleConnectFromFind}
-              onFlagItem={handleFlagItem}
-            />
-          )}
+
 
           {currentTab === 'admin' && currentUser?.role === 'admin' && (
             <AdminPanel

@@ -127,21 +127,32 @@ export function useAppStore() {
 
   const handleLogout = () => {
     setCurrentUser(null);
+    localStorage.removeItem('clf_user');
+    localStorage.removeItem('clf_items');
+    localStorage.removeItem('clf_matches');
+    localStorage.removeItem('clf_conversations');
+    localStorage.removeItem('clf_notifications');
+    setItems([]);
+    setMatches([]);
+    setConversations([]);
+    setNotifications([]);
     setCurrentTab('signin');
   };
 
   const handleLogin = async (user) => {
     try {
       let dbUser = null;
-      if (user.password) {
-        dbUser = await api.register(user).catch(() => api.login(user.matricNumber, user.password).catch(() => null));
+      if (user.name) {
+        // Register mode
+        dbUser = await api.register(user).catch(() => null);
       } else {
-        dbUser = await api.login(user.matricNumber, '').catch(() => null);
+        // Login mode with email & password
+        dbUser = await api.login(user.email, user.password).catch(() => null);
       }
       const finalUser = dbUser || user;
       setCurrentUser(finalUser);
       setUsers(prev => {
-        const exists = prev.some(u => u.id === finalUser.id || u.matricNumber === finalUser.matricNumber);
+        const exists = prev.some(u => u.id === finalUser.id || u.email === finalUser.email);
         return exists ? prev : [finalUser, ...prev];
       });
       setCurrentTab(finalUser.role === 'admin' ? 'admin' : 'dashboard');

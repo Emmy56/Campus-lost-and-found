@@ -34,7 +34,7 @@ export default function Header({
         {/* Center: Navigation Links */}
         <nav className="hidden md:flex items-center gap-8">
           <button
-            onClick={() => onTabChange('dashboard')}
+            onClick={() => onTabChange(currentUser ? 'dashboard' : 'signin')}
             className={`text-sm font-medium transition-colors cursor-pointer ${
               currentTab === 'dashboard'
                 ? 'text-blue-600 font-bold'
@@ -45,31 +45,25 @@ export default function Header({
           </button>
           
           <button
-            onClick={() => {
-              if (currentUser) {
-                onTabChange('report-lost');
-              } else {
-                onTabChange('signin');
-              }
-            }}
+            onClick={() => onTabChange(currentUser ? 'report-lost' : 'signin')}
             className={`text-sm font-medium transition-colors cursor-pointer ${
-              currentTab === 'report-lost' || currentTab === 'report-found'
+              currentTab === 'report-lost'
                 ? 'text-blue-600 font-bold'
                 : 'text-gray-500 hover:text-black'
             }`}
           >
-            Report item
+            Report lost item
           </button>
 
           <button
-            onClick={() => onTabChange('find-item')}
+            onClick={() => onTabChange(currentUser ? 'report-found' : 'signin')}
             className={`text-sm font-medium transition-colors cursor-pointer ${
-              currentTab === 'find-item'
+              currentTab === 'report-found'
                 ? 'text-blue-600 font-bold'
                 : 'text-gray-500 hover:text-black'
             }`}
           >
-            Find item
+            Report found item
           </button>
 
           <button

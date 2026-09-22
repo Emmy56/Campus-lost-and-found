@@ -147,13 +147,16 @@ app.post('/api/auth/register', async (req, res) => {
 // 2. Auth: Login
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { matricNumber, password } = req.body;
-    const matricUpper = (matricNumber || '').toUpperCase().trim();
+    const { email, matricNumber, password } = req.body;
+    const term = (email || matricNumber || '').trim();
 
-    const user = await dbUsers.find(matricUpper);
+    const user = await dbUsers.find(term);
     if (user) {
       if (user.isBanned) {
         return res.status(403).json({ error: 'Your account has been deactivated/banned by Campus Admin.' });
+      }
+      if (user.password && password && user.password !== password) {
+        return res.status(400).json({ error: 'Incorrect password. Please check your credentials.' });
       }
       return res.json({
         id: user.id,
@@ -167,25 +170,7 @@ app.post('/api/auth/login', async (req, res) => {
       });
     }
 
-    // Auto register new student in DB
-    const userId = 'user-' + Date.now();
-    const demoEmail = `${matricUpper.toLowerCase().replace(/\//g, '')}@student.oauife.edu.ng`;
-    const role = (matricUpper === 'ADMIN' || matricUpper === 'ADMIN/OAU/001') ? 'admin' : 'student';
-
-    const newUser = {
-      id: userId,
-      name: matricUpper,
-      matricNumber: matricUpper,
-      studentId: matricUpper,
-      email: demoEmail,
-      password: password || '',
-      role,
-      isBanned: false,
-      createdAt: new Date().toISOString()
-    };
-
-    await dbUsers.create(newUser);
-    res.json(newUser);
+    return res.status(404).json({ error: 'No registered account found with this email. Please click "Register Now" to create an account.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -58,32 +58,25 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
       };
       onAuthSuccess(newUser);
     } else {
-      if (!matricNumber || !password) {
-        setErrorMsg('Please enter your Matric Number / Student ID and Password.');
+      if (!email || !password) {
+        setErrorMsg('Please enter your Student Email Address and Password.');
         return;
       }
       
-      // Check if admin login credentials
-      if (isSpecialAdmin) {
-        onAuthSuccess(defaultAdmin);
-        return;
-      }
+      const cleanEmail = email.toLowerCase().trim();
+      const isAdminEmail = cleanEmail === 'admin@student.oauife.edu.ng' || cleanEmail === 'admin';
 
-      // Validate matric format for student login
-      if (!MATRIC_REGEX.test(cleanMatric)) {
-        setErrorMsg('Matriculation Number must follow the format XXX/0000/000 (e.g. CSC/2022/012)');
+      if (!isAdminEmail && !cleanEmail.endsWith('@student.oauife.edu.ng')) {
+        setErrorMsg('Sign in requires a valid @student.oauife.edu.ng email address.');
         return;
       }
 
       const loggedUser = {
         id: 'user-' + Date.now(),
-        name: `Student (${cleanMatric})`,
-        matricNumber: cleanMatric,
-        studentId: cleanMatric,
+        email: cleanEmail,
         password: password,
-        email: `${cleanMatric.toLowerCase().replace(/\//g, '')}@student.oauife.edu.ng`,
-        role: 'student',
-        isBanned: false
+        matricNumber: cleanEmail.split('@')[0].toUpperCase(),
+        role: isAdminEmail ? 'admin' : 'student'
       };
       onAuthSuccess(loggedUser);
     }
@@ -96,10 +89,9 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
           {screen === 'signin' ? 'Sign in to Campus Lost & Found' : 'Register OAU Student Account'}
         </h2>
         <p className="text-sm text-gray-500">
-          {screen === 'signin' ? 'Access your reports, AI matches, and safe messages' : 'Restricted exclusively to OAU students (@student.oauife.edu.ng)'}
+          {screen === 'signin' ? 'Sign in with your @student.oauife.edu.ng email & password' : 'Restricted exclusively to OAU students (@student.oauife.edu.ng)'}
         </p>
       </div>
-
 
       <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-md px-4">
         <div className="bg-white py-8 px-4 border border-gray-100 rounded-2xl sm:px-10 shadow-sm">
@@ -134,47 +126,47 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
               </div>
             )}
 
-            {/* Matric Number field */}
-            <div className="space-y-1">
-              <label className="block text-xs font-semibold text-gray-700">
-                Matriculation Number (Format: XXX/0000/000)
-              </label>
-              <div className="relative rounded-xl shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 font-mono text-xs font-bold select-none">
-                  ID
-                </div>
-                <input
-                  type="text"
-                  required
-                  value={matricNumber}
-                  onChange={(e) => setMatricNumber(e.target.value)}
-                  placeholder="e.g. CSC/2022/012 (or admin)"
-                  className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-xs font-mono font-bold uppercase focus:outline-none focus:border-blue-500"
-                />
-              </div>
-            </div>
-
-            {/* SIGN UP: School email address */}
+            {/* SIGN UP ONLY: Matric Number field */}
             {screen === 'signup' && (
               <div className="space-y-1">
                 <label className="block text-xs font-semibold text-gray-700">
-                  Student Email Address (@student.oauife.edu.ng)
+                  Matriculation Number (Format: XXX/0000/000)
                 </label>
                 <div className="relative rounded-xl shadow-sm">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                    <Mail className="h-4 w-4" />
+                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 font-mono text-xs font-bold select-none">
+                    ID
                   </div>
                   <input
-                    type="email"
+                    type="text"
                     required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="yourname@student.oauife.edu.ng"
-                    className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500"
+                    value={matricNumber}
+                    onChange={(e) => setMatricNumber(e.target.value)}
+                    placeholder="e.g. CSC/2022/012"
+                    className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-xs font-mono font-bold uppercase focus:outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
             )}
+
+            {/* Email field (Sign In & Sign Up) */}
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-gray-700">
+                Student Email Address (@student.oauife.edu.ng)
+              </label>
+              <div className="relative rounded-xl shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                  <Mail className="h-4 w-4" />
+                </div>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="yourname@student.oauife.edu.ng"
+                  className="block w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl text-xs font-medium focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
 
             {/* Password field */}
             <div className="space-y-1">

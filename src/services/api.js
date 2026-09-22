@@ -15,11 +15,11 @@ export const api = {
     return res.json();
   },
 
-  async login(matricNumber) {
+  async login(email, password) {
     const res = await fetch(`${API_BASE}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matricNumber })
+      body: JSON.stringify({ email, password })
     });
     if (!res.ok) {
       const err = await res.json();
