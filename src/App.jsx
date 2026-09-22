@@ -142,12 +142,14 @@ export default function App() {
 
           {currentTab === 'admin' && currentUser?.role === 'admin' && (
             <AdminPanel
-              items={items}
+              items={rawItems || items}
               users={users}
+              matches={matches}
               onFlagItem={handleFlagItem}
               onRemoveItem={handleRemoveItem}
               onDismissFlag={handleDismissFlag}
               onToggleBanUser={handleToggleBanUser}
+              onUpdateMatchStatus={handleUpdateMatchStatus}
             />
           )}
         </main>
