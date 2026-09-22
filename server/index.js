@@ -204,18 +204,19 @@ app.post('/api/items', async (req, res) => {
     }
 
     const newItem = {
+      title: title,
+      description: description,
+      itemType: type === 'lost' ? 'Lost Item' : 'Found Item',
+      type: type,
+      loggedBy: authorName,
+      category: category,
+      location: location,
+      specificLocation: specificLocation || '',
+      date: date,
+      time: time || '',
+      status: 'active',
       id: itemId,
       userId: userId || 'guest',
-      loggedBy: authorName,
-      title,
-      type,
-      status: 'active',
-      category,
-      description,
-      location,
-      specificLocation: specificLocation || '',
-      date,
-      time: time || '',
       reward: reward || '',
       image: image || null,
       isFlagged: false,
@@ -249,41 +250,41 @@ app.post('/api/items', async (req, res) => {
       const mockChatId = 'chat-new-' + Date.now();
 
       const newMatch = {
-        id: mockMatchId,
-        userItemId: itemId,
-        matchedItemId: bestMatch.id,
         matchedItemTitle: bestMatch.title,
+        matchedItemType: bestMatch.type === 'lost' ? 'Lost Item' : 'Found Item',
         matchedItemLocation: bestMatch.location,
-        matchedItemType: bestMatch.type,
         matchPercentage: highestScore,
         status: 'pending',
         finderName: 'Student Peer',
+        userItemId: itemId,
+        matchedItemId: bestMatch.id,
         chatId: mockChatId,
+        id: mockMatchId,
         createdAt: new Date().toISOString()
       };
       await dbMatches.create(newMatch);
 
       const newConv = {
-        id: mockChatId,
         title: `Re: ${title}`,
-        matchId: mockMatchId,
-        unreadCount: 0,
         lastMessageText: '',
         lastMessageTime: 'Just now',
+        matchId: mockMatchId,
+        unreadCount: 0,
+        id: mockChatId,
         createdAt: new Date().toISOString()
       };
       await dbConversations.create(newConv);
 
       const notifId = 'notif-' + Date.now();
       const newNotif = {
-        id: notifId,
-        userId: userId || 'guest',
         title: 'AI Similarity Match Detected!',
         message: `Your report "${title}" has a ${highestScore}% Jaro-Winkler match with "${bestMatch.title}".`,
-        timestamp: 'Just now',
+        userId: userId || 'guest',
         type: 'match',
+        timestamp: 'Just now',
         read: false,
         linkTab: 'dashboard',
+        id: notifId,
         createdAt: new Date().toISOString()
       };
       await dbNotifications.create(newNotif);

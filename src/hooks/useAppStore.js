@@ -239,12 +239,24 @@ export function useAppStore() {
     }
 
     const newItem = createdItem || {
+      title: itemData.title,
+      description: itemData.description,
+      itemType: itemData.type === 'lost' ? 'Lost Item' : 'Found Item',
+      type: itemData.type,
+      loggedBy: authorStr,
+      category: itemData.category,
+      location: itemData.location,
+      specificLocation: itemData.specificLocation || '',
+      date: itemData.date,
+      time: itemData.time || '',
+      status: 'active',
       id: 'item-' + Date.now(),
       userId: currentUser?.id || 'user-' + Date.now(),
-      loggedBy: authorStr,
-      status: 'active',
+      reward: itemData.reward || '',
+      image: itemData.image || null,
       isFlagged: false,
-      ...itemData
+      flagReason: '',
+      createdAt: new Date().toISOString()
     };
 
     // Single item update ensuring no duplicate by ID
@@ -269,38 +281,41 @@ export function useAppStore() {
       const mockChatId = 'chat-' + Date.now();
 
       const newMatch = {
-        id: mockMatchId,
-        userItemId: newItem.id,
-        matchedItemId: bestMatchItem.id,
         matchedItemTitle: bestMatchItem.title,
+        matchedItemType: bestMatchItem.type === 'lost' ? 'Lost Item' : 'Found Item',
         matchedItemLocation: bestMatchItem.location,
-        matchedItemType: bestMatchItem.type,
         matchPercentage: highestScore,
         status: 'pending',
         finderName: 'Student Peer',
-        chatId: mockChatId
+        userItemId: newItem.id,
+        matchedItemId: bestMatchItem.id,
+        chatId: mockChatId,
+        id: mockMatchId,
+        createdAt: new Date().toISOString()
       };
 
       const newConv = {
-        id: mockChatId,
         title: `Re: ${newItem.title}`,
-        matchId: mockMatchId,
-        unreadCount: 0,
         lastMessageText: '',
         lastMessageTime: 'Just now',
+        matchId: mockMatchId,
+        unreadCount: 0,
         participants: [{ id: bestMatchItem.userId || 'user-peer', name: 'Student Peer', online: true }],
-        messages: []
+        messages: [],
+        id: mockChatId,
+        createdAt: new Date().toISOString()
       };
 
       const newNotif = {
-        id: 'notif-' + Date.now(),
-        userId: currentUser?.id || 'guest',
         title: 'AI Similarity Match Detected!',
         message: `Your report "${newItem.title}" has a ${highestScore}% Jaro-Winkler match with "${bestMatchItem.title}".`,
-        timestamp: 'Just now',
+        userId: currentUser?.id || 'guest',
         type: 'match',
+        timestamp: 'Just now',
         read: false,
-        linkTab: 'dashboard'
+        linkTab: 'dashboard',
+        id: 'notif-' + Date.now(),
+        createdAt: new Date().toISOString()
       };
 
       setMatches(prev => [newMatch, ...prev.filter(m => m.id !== newMatch.id)]);
