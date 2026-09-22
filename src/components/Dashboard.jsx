@@ -16,7 +16,7 @@ export default function Dashboard({
 
   const myItems = items.filter(item => item.userId === currentUser?.id);
   const myMatches = matches.filter(match => 
-    myItems.some(item => item.id === match.userItemId)
+    myItems.some(item => item.id === match.userItemId || item.id === match.matchedItemId)
   );
 
   const pendingMatchesCount = myMatches.filter(m => m.status === 'pending').length;
@@ -100,7 +100,7 @@ export default function Dashboard({
             ) : (
               <div className="space-y-6">
                 {myMatches.map(match => {
-                  const userItem = items.find(i => i.id === match.userItemId);
+                  const userItem = myItems.find(i => i.id === match.userItemId || i.id === match.matchedItemId);
                   return (
                     <MatchCard
                       key={match.id}

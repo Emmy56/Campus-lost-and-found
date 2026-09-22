@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Search, Send } from 'lucide-react';
+import { ArrowLeft, Search, Send, MessageSquare } from 'lucide-react';
 import ConversationItem from './messages/ConversationItem';
 import ChatMessageItem from './messages/ChatMessageItem';
 import ChatHeader from './messages/ChatHeader';
 
 export default function Messages({
   currentUser,
-  conversations,
-  matches,
+  conversations = [],
+  matches = [],
   activeConversationId,
   onSelectConversation,
   onSendMessage,
@@ -18,12 +18,16 @@ export default function Messages({
   const [inputText, setInputText] = useState('');
   const messagesEndRef = useRef(null);
 
-  const activeConversation = conversations.find(c => c.id === activeConversationId) || conversations[0];
+  // Filter conversations to only include those that have at least 1 message sent or received
+  const conversationsWithMessages = conversations.filter(c => c.messages && c.messages.length > 0);
 
-  // Filter conversations based on search query
-  const filteredConversations = conversations.filter(c => 
-    c.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    c.participants.some(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()))
+  // Active conversation is explicitly selected by ID (e.g. from Message Finder) or defaults to first with messages
+  const activeConversation = conversations.find(c => c.id === activeConversationId) || conversationsWithMessages[0];
+
+  // Filter left-hand conversation column based on search query
+  const filteredConversations = conversationsWithMessages.filter(c => 
+    (c.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.participants && c.participants.some(p => (p.name || '').toLowerCase().includes(searchQuery.toLowerCase())))
   );
 
   // Auto scroll to bottom of active conversation messages
@@ -33,7 +37,7 @@ export default function Messages({
 
   const handleSend = (e) => {
     e.preventDefault();
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || !activeConversation) return;
     onSendMessage(activeConversation.id, inputText);
     setInputText('');
   };
@@ -42,7 +46,7 @@ export default function Messages({
   const associatedMatch = matches.find(m => m.chatId === activeConversation?.id);
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-6 py-8 space-y-6 font-sans">
       {/* Header with Back Arrow */}
       <div className="flex items-center gap-4">
         <button
@@ -53,7 +57,7 @@ export default function Messages({
         </button>
         <div>
           <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">Messages</h1>
-          <p className="text-sm text-gray-500 mt-1">Chat with finders of items</p>
+          <p className="text-sm text-gray-500 mt-1">Student-to-student direct messaging</p>
         </div>
       </div>
 
@@ -77,8 +81,9 @@ export default function Messages({
           {/* Conversations container */}
           <div className="flex-1 overflow-y-auto divide-y divide-gray-50">
             {filteredConversations.length === 0 ? (
-              <div className="p-6 text-center text-xs text-gray-400 font-medium">
-                No chats found
+              <div className="p-8 text-center text-xs text-gray-400 font-medium space-y-1">
+                <p className="font-semibold text-gray-500">No conversations yet</p>
+                <p className="text-[11px] text-gray-400">Chats appear here once a message is sent or received.</p>
               </div>
             ) : (
               filteredConversations.map((conv) => (
@@ -111,9 +116,12 @@ export default function Messages({
                     <ChatMessageItem key={msg.id} message={msg} currentUser={currentUser} />
                   ))
                 ) : (
-                  <div className="py-16 text-center text-gray-400 text-xs font-medium space-y-1">
-                    <p className="font-bold text-gray-700">No messages in this chat yet.</p>
-                    <p className="text-gray-400">Type a message below to reach out to the finder!</p>
+                  <div className="py-20 text-center text-gray-400 text-xs font-medium space-y-2">
+                    <MessageSquare className="w-10 h-10 text-blue-500/40 mx-auto" />
+                    <p className="font-bold text-gray-800 text-sm">Start the Conversation</p>
+                    <p className="text-gray-500 max-w-xs mx-auto">
+                      Send a message below to coordinate item verification and recovery with the finder.
+                    </p>
                   </div>
                 )}
                 <div ref={messagesEndRef} />
@@ -126,7 +134,7 @@ export default function Messages({
               >
                 <input
                   type="text"
-                  placeholder="Type a message"
+                  placeholder="Type a message..."
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   className="flex-1 bg-white border border-gray-200 rounded-full px-5 py-3 text-sm focus:outline-none focus:border-blue-500 transition-colors text-gray-800 shadow-inner"
@@ -145,8 +153,12 @@ export default function Messages({
               </form>
             </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full text-gray-400">
-              <p>Select a conversation to start chatting</p>
+            <div className="flex flex-col items-center justify-center h-full text-gray-400 p-8 text-center space-y-2">
+              <MessageSquare className="w-12 h-12 text-gray-300 mx-auto" />
+              <p className="font-bold text-gray-700 text-base">No Active Conversations</p>
+              <p className="text-xs text-gray-400 max-w-sm">
+                Click "Message Finder" on a matched item card from your Dashboard to initiate a direct chat.
+              </p>
             </div>
           )}
         </div>

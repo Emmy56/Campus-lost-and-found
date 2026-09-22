@@ -112,7 +112,10 @@ export function useAppStore() {
       }
 
       if (fetchedConvs && fetchedConvs.length > 0 && !activeConversationId) {
-        setActiveConversationId(fetchedConvs[0].id);
+        const convWithMsgs = fetchedConvs.find(c => c.messages && c.messages.length > 0);
+        if (convWithMsgs) {
+          setActiveConversationId(convWithMsgs.id);
+        }
       }
     } catch (err) {
       console.warn('[Store] API Connection error, maintaining local state:', err);
