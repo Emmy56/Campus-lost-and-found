@@ -22,7 +22,7 @@ export default function Header({
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         {/* Left: Logo */}
         <div 
-          onClick={() => onTabChange('landing')}
+          onClick={() => onTabChange(currentUser ? 'dashboard' : 'signin')}
           className="flex items-center gap-3 cursor-pointer select-none group"
         >
           <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center text-white font-extrabold text-sm shadow-md group-hover:bg-blue-700 transition-colors">

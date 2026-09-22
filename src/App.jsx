@@ -1,6 +1,5 @@
 import React from 'react';
 import Header from './components/Header';
-import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import Messages from './components/Messages';
 import ReportForm from './components/ReportForm';
@@ -42,6 +41,10 @@ export default function App() {
   } = useAppStore();
 
   const handleTabChange = (tab) => {
+    if (tab === 'landing') {
+      setCurrentTab(currentUser ? 'dashboard' : 'signin');
+      return;
+    }
     if (!currentUser && (tab === 'dashboard' || tab === 'messages' || tab === 'report-lost' || tab === 'report-found' || tab === 'admin')) {
       setCurrentTab('signin');
     } else {
@@ -75,13 +78,6 @@ export default function App() {
 
         {/* Dynamic Route Switch Panel */}
         <main className="animate-fade-in duration-300">
-          {currentTab === 'landing' && (
-            <LandingPage
-              onStartReporting={handleStartReporting}
-              onNavigateToFind={() => setCurrentTab('find-item')}
-              stats={stats}
-            />
-          )}
 
           {currentTab === 'dashboard' && currentUser && (
             <Dashboard

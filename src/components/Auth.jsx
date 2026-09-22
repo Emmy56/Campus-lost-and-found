@@ -100,29 +100,6 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
         </p>
       </div>
 
-      {/* Quick Demo Login Preset Bar */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md px-4 mt-4">
-        <div className="bg-blue-50/70 border border-blue-100 rounded-xl p-3 flex justify-between items-center text-xs">
-          <span className="font-bold text-blue-900">Quick Test Logins:</span>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onAuthSuccess(defaultUser)}
-              className="px-2.5 py-1 bg-white hover:bg-blue-100 text-blue-700 font-bold border border-blue-200 rounded-lg transition-colors cursor-pointer"
-            >
-              Demo Student
-            </button>
-            <button
-              type="button"
-              onClick={() => onAuthSuccess(defaultAdmin)}
-              className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1"
-            >
-              <ShieldCheck className="w-3 h-3 text-blue-400" />
-              Campus Admin
-            </button>
-          </div>
-        </div>
-      </div>
 
       <div className="mt-4 sm:mx-auto sm:w-full sm:max-w-md px-4">
         <div className="bg-white py-8 px-4 border border-gray-100 rounded-2xl sm:px-10 shadow-sm">

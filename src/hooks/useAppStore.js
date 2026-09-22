@@ -14,7 +14,7 @@ export function useAppStore() {
   });
 
   const [users, setUsers] = useState([defaultUser, defaultAdmin]);
-  const [currentTab, setCurrentTab] = useState('landing');
+  const [currentTab, setCurrentTab] = useState('signin');
   
   const [items, setItems] = useState(() => {
     try {
@@ -80,7 +80,7 @@ export function useAppStore() {
     localStorage.setItem('clf_notifications', JSON.stringify(notifications));
   }, [notifications]);
 
-  // Load live data from PostgreSQL / SQL Express Backend API
+  // Load live data from Cloud Firestore Backend API
   const loadDbData = async () => {
     try {
       const [fetchedItems, fetchedMatches, fetchedConvs, fetchedNotifs, fetchedUsers] = await Promise.all([
@@ -92,35 +92,19 @@ export function useAppStore() {
       ]);
 
       if (fetchedItems && fetchedItems.length > 0) {
-        setItems(prev => {
-          const ids = new Set(fetchedItems.map(i => i.id));
-          const localOnly = prev.filter(i => !ids.has(i.id));
-          return [...fetchedItems, ...localOnly];
-        });
+        setItems(fetchedItems);
       }
 
       if (fetchedMatches && fetchedMatches.length > 0) {
-        setMatches(prev => {
-          const ids = new Set(fetchedMatches.map(m => m.id));
-          const localOnly = prev.filter(m => !ids.has(m.id));
-          return [...fetchedMatches, ...localOnly];
-        });
+        setMatches(fetchedMatches);
       }
 
       if (fetchedConvs && fetchedConvs.length > 0) {
-        setConversations(prev => {
-          const ids = new Set(fetchedConvs.map(c => c.id));
-          const localOnly = prev.filter(c => !ids.has(c.id));
-          return [...fetchedConvs, ...localOnly];
-        });
+        setConversations(fetchedConvs);
       }
 
       if (fetchedNotifs && fetchedNotifs.length > 0) {
-        setNotifications(prev => {
-          const ids = new Set(fetchedNotifs.map(n => n.id));
-          const localOnly = prev.filter(n => !ids.has(n.id));
-          return [...fetchedNotifs, ...localOnly];
-        });
+        setNotifications(fetchedNotifs);
       }
 
       if (fetchedUsers && fetchedUsers.length > 0) {
@@ -143,7 +127,7 @@ export function useAppStore() {
 
   const handleLogout = () => {
     setCurrentUser(null);
-    setCurrentTab('landing');
+    setCurrentTab('signin');
   };
 
   const handleLogin = async (user) => {
@@ -225,7 +209,18 @@ export function useAppStore() {
   };
 
   const handleAddReport = async (itemData) => {
-    const newItem = {
+    let createdItem = null;
+    try {
+      const payload = { ...itemData, userId: currentUser?.id || 'user-guest' };
+      const res = await api.createItem(payload);
+      if (res && res.item) {
+        createdItem = res.item;
+      }
+    } catch (err) {
+      console.warn('[Store] Remote API sync warning:', err);
+    }
+
+    const newItem = createdItem || {
       id: 'item-' + Date.now(),
       userId: currentUser?.id || 'user-' + Date.now(),
       status: 'active',
@@ -233,8 +228,11 @@ export function useAppStore() {
       ...itemData
     };
 
+    // Single item update ensuring no duplicate by ID
+    setItems(prev => [newItem, ...prev.filter(i => i.id !== newItem.id)]);
+
     // Calculate AI similarity match against existing items in state
-    const oppositeItems = items.filter(i => i.type !== newItem.type && i.status === 'active');
+    const oppositeItems = items.filter(i => i.id !== newItem.id && i.type !== newItem.type && i.status === 'active');
     let bestMatchItem = null;
     let highestScore = 0;
 
@@ -245,9 +243,6 @@ export function useAppStore() {
         bestMatchItem = target;
       }
     }
-
-    // Add new item to state
-    setItems(prev => [newItem, ...prev]);
 
     // ONLY generate a match if an actual matching opposite item exists with score >= 60
     if (bestMatchItem && highestScore >= 60) {
@@ -298,20 +293,14 @@ export function useAppStore() {
         linkTab: 'dashboard'
       };
 
-      setMatches(prev => [newMatch, ...prev]);
-      setConversations(prev => [newConv, ...prev]);
-      setNotifications(prev => [newNotif, ...prev]);
+      setMatches(prev => [newMatch, ...prev.filter(m => m.id !== newMatch.id)]);
+      setConversations(prev => [newConv, ...prev.filter(c => c.id !== newConv.id)]);
+      setNotifications(prev => [newNotif, ...prev.filter(n => n.id !== newNotif.id)]);
     }
 
     // Switch view to dashboard immediately
     setCurrentTab('dashboard');
-
-    try {
-      const payload = { ...itemData, userId: currentUser?.id || 'user-guest' };
-      await api.createItem(payload);
-    } catch (err) {
-      console.warn('[Store] Remote API sync warning:', err);
-    }
+    loadDbData();
   };
 
   const handleFlagItem = async (itemId, reason) => {
