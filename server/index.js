@@ -189,12 +189,24 @@ app.get('/api/items', async (req, res) => {
 // 4. Submit New Item & Run AI Match Calculation
 app.post('/api/items', async (req, res) => {
   try {
-    const { title, type, category, description, location, specificLocation, date, time, reward, image, userId } = req.body;
+    const { title, type, category, description, location, specificLocation, date, time, reward, image, userId, loggedBy } = req.body;
     const itemId = 'item-' + Date.now();
+
+    let authorName = loggedBy;
+    if (!authorName && userId && userId !== 'guest') {
+      const user = await dbUsers.find(userId);
+      if (user) {
+        authorName = `${user.name} (${user.matricNumber || user.email})`;
+      }
+    }
+    if (!authorName) {
+      authorName = 'OAU Student';
+    }
 
     const newItem = {
       id: itemId,
       userId: userId || 'guest',
+      loggedBy: authorName,
       title,
       type,
       status: 'active',

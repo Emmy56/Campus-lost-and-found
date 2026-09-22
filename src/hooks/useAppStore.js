@@ -219,8 +219,16 @@ export function useAppStore() {
 
   const handleAddReport = async (itemData) => {
     let createdItem = null;
+    const authorStr = currentUser
+      ? `${currentUser.name} (${currentUser.matricNumber || currentUser.email})`
+      : 'OAU Student';
+
     try {
-      const payload = { ...itemData, userId: currentUser?.id || 'user-guest' };
+      const payload = {
+        ...itemData,
+        userId: currentUser?.id || 'user-guest',
+        loggedBy: authorStr
+      };
       const res = await api.createItem(payload);
       if (res && res.item) {
         createdItem = res.item;
@@ -232,6 +240,7 @@ export function useAppStore() {
     const newItem = createdItem || {
       id: 'item-' + Date.now(),
       userId: currentUser?.id || 'user-' + Date.now(),
+      loggedBy: authorStr,
       status: 'active',
       isFlagged: false,
       ...itemData

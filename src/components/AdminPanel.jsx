@@ -191,6 +191,11 @@ export default function AdminPanel({
                         </div>
                         <h4 className="font-extrabold text-gray-900 text-base">{item.title}</h4>
                         <p className="text-xs text-gray-600">{item.description}</p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <span className="text-[11px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                            Logged by: {item.loggedBy || 'OAU Student'}
+                          </span>
+                        </div>
                         <p className="text-xs text-amber-700 font-medium mt-1">
                           Reason: {item.flagReason || 'Reported by campus user for moderation review'}
                         </p>
@@ -363,7 +368,12 @@ export default function AdminPanel({
 
                         <h4 className="font-bold text-gray-900 text-sm">{item.title}</h4>
                         <p className="text-xs text-gray-500 mt-1 line-clamp-2">{item.description}</p>
-                        <p className="text-[10px] text-gray-400 font-medium mt-1">Category: {item.category}</p>
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <span className="text-[10px] text-gray-400 font-medium">Category: {item.category}</span>
+                          <span className="text-[10px] text-blue-700 font-bold bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
+                            Logged by: {item.loggedBy || 'OAU Student'}
+                          </span>
+                        </div>
                       </div>
 
                       <div className="pt-2 border-t border-gray-50 flex justify-between items-center text-xs">
