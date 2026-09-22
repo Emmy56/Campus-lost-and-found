@@ -13,8 +13,17 @@ export function useAppStore() {
     }
   });
 
-  const [users, setUsers] = useState([defaultUser, defaultAdmin]);
-  const [currentTab, setCurrentTab] = useState('signin');
+  const [currentTab, setCurrentTab] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('clf_user');
+      if (savedUser) {
+        const user = JSON.parse(savedUser);
+        if (user && user.role === 'admin') return 'admin';
+        if (user) return 'dashboard';
+      }
+    } catch (e) {}
+    return 'signin';
+  });
   
   const [items, setItems] = useState(() => {
     try {

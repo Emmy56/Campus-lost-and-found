@@ -143,7 +143,7 @@ export default function App() {
 
           {currentTab === 'admin' && currentUser?.role === 'admin' && (
             <AdminPanel
-              items={rawItems || items}
+              items={items}
               users={users}
               matches={matches}
               onFlagItem={handleFlagItem}
