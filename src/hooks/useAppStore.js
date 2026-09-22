@@ -170,8 +170,6 @@ export function useAppStore() {
     matchesThisWeek: matches.length
   };
 
-  const unreadMessagesCount = conversations.reduce((acc, conv) => acc + conv.unreadCount, 0);
-
   const handleMarkAllNotificationsRead = async () => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     await api.markAllNotificationsRead().catch(() => {});
@@ -383,15 +381,36 @@ export function useAppStore() {
     setCurrentTab('messages');
   };
 
+  const isUserAdmin = currentUser?.role === 'admin';
+
+  const userItems = isUserAdmin
+    ? items
+    : items.filter(i => i.userId === currentUser?.id);
+
+  const userMatches = isUserAdmin
+    ? matches
+    : matches.filter(m => userItems.some(i => i.id === m.userItemId || i.id === m.matchedItemId));
+
+  const userConversations = isUserAdmin
+    ? conversations
+    : conversations.filter(c => userMatches.some(m => m.chatId === c.id || m.id === c.matchId) || c.participants?.some(p => p.id === currentUser?.id));
+
+  const userNotifications = isUserAdmin
+    ? notifications
+    : notifications.filter(n => n.userId === currentUser?.id);
+
+  const unreadMessagesCount = userConversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+
   return {
     currentUser,
     users,
     currentTab,
     setCurrentTab,
-    items,
-    matches,
-    conversations,
-    notifications,
+    items: userItems,
+    matches: userMatches,
+    conversations: userConversations,
+    notifications: userNotifications,
+    rawItems: items,
     activeConversationId,
     setActiveConversationId,
     reportType,
