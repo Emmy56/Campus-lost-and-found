@@ -140,27 +140,27 @@ export function useAppStore() {
   };
 
   const handleLogin = async (user) => {
-    try {
-      let dbUser = null;
-      if (user.name) {
-        // Register mode
-        dbUser = await api.register(user).catch(() => null);
-      } else {
-        // Login mode with email & password
-        dbUser = await api.login(user.email, user.password).catch(() => null);
-      }
-      const finalUser = dbUser || user;
-      setCurrentUser(finalUser);
-      setUsers(prev => {
-        const exists = prev.some(u => u.id === finalUser.id || u.email === finalUser.email);
-        return exists ? prev : [finalUser, ...prev];
-      });
-      setCurrentTab(finalUser.role === 'admin' ? 'admin' : 'dashboard');
-    } catch (e) {
-      setCurrentUser(user);
-      setCurrentTab(user.role === 'admin' ? 'admin' : 'dashboard');
+    let dbUser = null;
+    if (user.name) {
+      // Register mode - throws Error if duplicate matric or email
+      dbUser = await api.register(user);
+    } else {
+      // Login mode - throws Error if unrecognized email or incorrect password
+      dbUser = await api.login(user.email, user.password);
     }
+    
+    if (!dbUser) {
+      throw new Error('Authentication failed. Incorrect email or password.');
+    }
+
+    setCurrentUser(dbUser);
+    setUsers(prev => {
+      const exists = prev.some(u => u.id === dbUser.id || u.email === dbUser.email);
+      return exists ? prev : [dbUser, ...prev];
+    });
+    setCurrentTab(dbUser.role === 'admin' ? 'admin' : 'dashboard');
     loadDbData();
+    return dbUser;
   };
 
   const stats = {

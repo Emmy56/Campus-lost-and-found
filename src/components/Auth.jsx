@@ -15,70 +15,79 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  const handleSubmit = (e) => {
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    setLoading(true);
     
     const cleanMatric = matricNumber.trim().toUpperCase();
-    const isSpecialAdmin = cleanMatric === 'ADMIN' || cleanMatric === 'ADMIN/OAU/001';
 
-    if (screen === 'signup') {
-      if (!fullname || !matricNumber || !email || !password || !confirmPassword) {
-        setErrorMsg('Please fill in all required fields.');
-        return;
-      }
-      
-      // Strict Matric Format Validation: XXX/0000/000
-      if (!MATRIC_REGEX.test(cleanMatric)) {
-        setErrorMsg('Matriculation Number must follow the format XXX/0000/000 (e.g. CSC/2022/012)');
-        return;
-      }
+    try {
+      if (screen === 'signup') {
+        if (!fullname || !matricNumber || !email || !password || !confirmPassword) {
+          setErrorMsg('Please fill in all required fields.');
+          setLoading(false);
+          return;
+        }
+        
+        // Strict Matric Format Validation: XXX/0000/000
+        if (!MATRIC_REGEX.test(cleanMatric)) {
+          setErrorMsg('Matriculation Number must follow the format XXX/0000/000 (e.g. CSC/2022/012)');
+          setLoading(false);
+          return;
+        }
 
-      // Strict OAU Student Email Validation: ONLY @student.oauife.edu.ng
-      const isOauStudentEmail = email.toLowerCase().trim().endsWith('@student.oauife.edu.ng');
-      if (!isOauStudentEmail) {
-        setErrorMsg('Registration is restricted exclusively to valid OAU student emails ending with @student.oauife.edu.ng');
-        return;
-      }
+        // Strict OAU Student Email Validation: ONLY @student.oauife.edu.ng
+        const isOauStudentEmail = email.toLowerCase().trim().endsWith('@student.oauife.edu.ng');
+        if (!isOauStudentEmail) {
+          setErrorMsg('Registration is restricted exclusively to valid OAU student emails ending with @student.oauife.edu.ng');
+          setLoading(false);
+          return;
+        }
 
-      if (password !== confirmPassword) {
-        setErrorMsg('Passwords do not match.');
-        return;
-      }
+        if (password !== confirmPassword) {
+          setErrorMsg('Passwords do not match.');
+          setLoading(false);
+          return;
+        }
 
-      const newUser = {
-        id: 'user-' + Date.now(),
-        name: fullname,
-        matricNumber: cleanMatric,
-        studentId: cleanMatric,
-        email: email.toLowerCase().trim(),
-        password: password,
-        role: 'student',
-        isBanned: false
-      };
-      onAuthSuccess(newUser);
-    } else {
-      if (!email || !password) {
-        setErrorMsg('Please enter your Student Email Address and Password.');
-        return;
-      }
-      
-      const cleanEmail = email.toLowerCase().trim();
-      const isAdminEmail = cleanEmail === 'admin@student.oauife.edu.ng' || cleanEmail === 'admin';
+        const newUser = {
+          name: fullname,
+          matricNumber: cleanMatric,
+          studentId: cleanMatric,
+          email: email.toLowerCase().trim(),
+          password: password,
+          role: 'student'
+        };
+        await onAuthSuccess(newUser);
+      } else {
+        if (!email || !password) {
+          setErrorMsg('Please enter your Student Email Address and Password.');
+          setLoading(false);
+          return;
+        }
+        
+        const cleanEmail = email.toLowerCase().trim();
+        const isAdminEmail = cleanEmail === 'admin@student.oauife.edu.ng' || cleanEmail === 'admin';
 
-      if (!isAdminEmail && !cleanEmail.endsWith('@student.oauife.edu.ng')) {
-        setErrorMsg('Sign in requires a valid @student.oauife.edu.ng email address.');
-        return;
-      }
+        if (!isAdminEmail && !cleanEmail.endsWith('@student.oauife.edu.ng')) {
+          setErrorMsg('Sign in requires a valid @student.oauife.edu.ng email address.');
+          setLoading(false);
+          return;
+        }
 
-      const loggedUser = {
-        id: 'user-' + Date.now(),
-        email: cleanEmail,
-        password: password,
-        matricNumber: cleanEmail.split('@')[0].toUpperCase(),
-        role: isAdminEmail ? 'admin' : 'student'
-      };
-      onAuthSuccess(loggedUser);
+        const credentials = {
+          email: cleanEmail,
+          password: password
+        };
+        await onAuthSuccess(credentials);
+      }
+    } catch (err) {
+      setErrorMsg(err.message || 'Incorrect details. Please check your credentials and try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -228,9 +237,15 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
             <div className="pt-2">
               <button
                 type="submit"
-                className="w-full py-3 px-4 rounded-xl text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors shadow-sm cursor-pointer"
+                disabled={loading}
+                className={`w-full py-3 px-4 rounded-xl text-xs font-bold text-white transition-all shadow-sm ${
+                  loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
+                }`}
               >
-                {screen === 'signin' ? 'Sign in' : 'Create Account'}
+                {loading
+                  ? (screen === 'signin' ? 'Verifying credentials...' : 'Creating Account...')
+                  : (screen === 'signin' ? 'Sign in' : 'Create Account')
+                }
               </button>
             </div>
 
