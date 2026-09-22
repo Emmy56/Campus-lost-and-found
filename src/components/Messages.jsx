@@ -5,6 +5,7 @@ import ChatMessageItem from './messages/ChatMessageItem';
 import ChatHeader from './messages/ChatHeader';
 
 export default function Messages({
+  currentUser,
   conversations,
   matches,
   activeConversationId,
@@ -105,9 +106,16 @@ export default function Messages({
 
               {/* Message History area */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {activeConversation.messages.map((msg) => (
-                  <ChatMessageItem key={msg.id} message={msg} />
-                ))}
+                {activeConversation.messages && activeConversation.messages.length > 0 ? (
+                  activeConversation.messages.map((msg) => (
+                    <ChatMessageItem key={msg.id} message={msg} currentUser={currentUser} />
+                  ))
+                ) : (
+                  <div className="py-16 text-center text-gray-400 text-xs font-medium space-y-1">
+                    <p className="font-bold text-gray-700">No messages in this chat yet.</p>
+                    <p className="text-gray-400">Type a message below to reach out to the finder!</p>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 

@@ -267,25 +267,12 @@ app.post('/api/items', async (req, res) => {
         id: mockChatId,
         title: `Re: ${title}`,
         matchId: mockMatchId,
-        unreadCount: 1,
-        lastMessageText: `Hi there! I think I have your ${title} or spotted it!`,
+        unreadCount: 0,
+        lastMessageText: '',
         lastMessageTime: 'Just now',
         createdAt: new Date().toISOString()
       };
       await dbConversations.create(newConv);
-
-      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const newMsg = {
-        id: 'm-' + Date.now(),
-        conversationId: mockChatId,
-        senderId: 'user-remote',
-        senderName: 'Student Peer',
-        text: `Hi there! I think I have your ${title} or spotted it! Let me know when we can meet up.`,
-        timestamp: timeStr,
-        isRead: false,
-        createdAt: new Date().toISOString()
-      };
-      await dbMessages.create(newMsg);
 
       const notifId = 'notif-' + Date.now();
       const newNotif = {
@@ -391,59 +378,29 @@ app.get('/api/conversations', async (req, res) => {
 app.post('/api/conversations/:id/messages', async (req, res) => {
   try {
     const conversationId = req.params.id;
-    const { text, senderName } = req.body;
+    const { text, senderName, senderId } = req.body;
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const userMsgId = 'msg-user-' + Date.now();
+    const userMsgId = 'msg-' + Date.now();
 
-    await dbMessages.create({
+    const newMsg = {
       id: userMsgId,
       conversationId,
-      senderId: 'me',
+      senderId: senderId || 'me',
       senderName: senderName || 'Student',
       text,
       timestamp: timeStr,
-      isRead: true,
+      isRead: false,
       createdAt: new Date().toISOString()
-    });
+    };
+
+    await dbMessages.create(newMsg);
 
     await dbConversations.update(conversationId, {
       lastMessageText: text,
       lastMessageTime: 'Just now'
     });
 
-    // Smart auto responder simulation saved to DB
-    setTimeout(async () => {
-      let replyText = "Sure! Let's meet at one of the recommended safe exchange zones. Does the Library foyer work for you?";
-      const lower = text.toLowerCase();
-      if (lower.includes('hi') || lower.includes('hello')) {
-        replyText = "Hey! Let's arrange a time to meet up and swap the item. Does tomorrow at 2pm at the library foyer work?";
-      } else if (lower.includes('tomorrow') || lower.includes('time') || lower.includes('meet') || lower.includes('place')) {
-        replyText = "Sounds perfect! I will be wearing a red jacket. See you there!";
-      } else if (lower.includes('thank') || lower.includes('thanks')) {
-        replyText = "You're very welcome! Glad I could help reunite you with your item. Have a wonderful day!";
-      }
-
-      const replyMsgId = 'msg-reply-' + Date.now();
-      const replyTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      await dbMessages.create({
-        id: replyMsgId,
-        conversationId,
-        senderId: 'reply',
-        senderName: 'Student Finder',
-        text: replyText,
-        timestamp: replyTime,
-        isRead: false,
-        createdAt: new Date().toISOString()
-      });
-
-      await dbConversations.update(conversationId, {
-        lastMessageText: replyText,
-        lastMessageTime: 'Just now'
-      });
-    }, 1200);
-
-    res.json({ success: true, messageId: userMsgId });
+    res.json({ success: true, messageId: userMsgId, message: newMsg });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

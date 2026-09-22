@@ -190,11 +190,12 @@ export function useAppStore() {
 
   const handleSendMessage = async (conversationId, text) => {
     const senderName = currentUser?.name || 'Student';
+    const senderId = currentUser?.id || 'me';
     
     // Add message locally to conversations
     const newMsg = {
       id: 'msg-' + Date.now(),
-      senderId: 'me',
+      senderId: senderId,
       senderName: senderName,
       text: text,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -207,13 +208,13 @@ export function useAppStore() {
           ...c,
           lastMessageText: text,
           lastMessageTime: 'Just now',
-          messages: [...c.messages, newMsg]
+          messages: [...(c.messages || []), newMsg]
         };
       }
       return c;
     }));
 
-    await api.sendMessage(conversationId, text, senderName).catch(() => {});
+    await api.sendMessage(conversationId, text, senderName, senderId).catch(() => {});
     loadDbData();
   };
 
@@ -284,20 +285,11 @@ export function useAppStore() {
         id: mockChatId,
         title: `Re: ${newItem.title}`,
         matchId: mockMatchId,
-        unreadCount: 1,
-        lastMessageText: `Hi! I think I have your ${newItem.title} or spotted it!`,
+        unreadCount: 0,
+        lastMessageText: '',
         lastMessageTime: 'Just now',
         participants: [{ id: bestMatchItem.userId || 'user-peer', name: 'Student Peer', online: true }],
-        messages: [
-          {
-            id: 'msg-init-' + Date.now(),
-            senderId: 'user-peer',
-            senderName: 'Student Peer',
-            text: `Hi there! I think I have your ${newItem.title} or spotted it! Let me know when we can meet up on campus.`,
-            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isRead: false
-          }
-        ]
+        messages: []
       };
 
       const newNotif = {

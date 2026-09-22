@@ -92,6 +92,7 @@ export default function App() {
 
           {currentTab === 'messages' && currentUser && (
             <Messages
+              currentUser={currentUser}
               conversations={conversations}
               matches={matches}
               activeConversationId={activeConversationId}

@@ -83,11 +83,11 @@ export const api = {
     return res.json();
   },
 
-  async sendMessage(conversationId, text, senderName) {
+  async sendMessage(conversationId, text, senderName, senderId) {
     await fetch(`${API_BASE}/conversations/${conversationId}/messages`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text, senderName })
+      body: JSON.stringify({ text, senderName, senderId })
     });
   },
 
