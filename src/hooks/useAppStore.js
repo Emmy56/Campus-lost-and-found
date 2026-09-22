@@ -7,7 +7,11 @@ export function useAppStore() {
   const [currentUser, setCurrentUser] = useState(() => {
     try {
       const saved = localStorage.getItem('clf_user');
-      return saved ? JSON.parse(saved) : null;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return (parsed && parsed.email) ? parsed : null;
+      }
+      return null;
     } catch (e) {
       return null;
     }
@@ -18,12 +22,25 @@ export function useAppStore() {
       const savedUser = localStorage.getItem('clf_user');
       if (savedUser) {
         const user = JSON.parse(savedUser);
-        if (user && user.role === 'admin') return 'admin';
-        if (user) return 'dashboard';
+        if (user && user.email) {
+          return user.role === 'admin' ? 'admin' : 'dashboard';
+        }
       }
     } catch (e) {}
     return 'signin';
   });
+
+  // Sync state to localStorage whenever changed
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('clf_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('clf_user');
+      if (['dashboard', 'messages', 'report-lost', 'report-found', 'admin'].includes(currentTab)) {
+        setCurrentTab('signin');
+      }
+    }
+  }, [currentUser, currentTab]);
   
   const [items, setItems] = useState(() => {
     try {

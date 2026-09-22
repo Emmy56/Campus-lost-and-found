@@ -121,7 +121,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'signin' && (
+          {(currentTab === 'signin' || (!currentUser && currentTab !== 'signup' && currentTab !== 'about')) && (
             <Auth
               initialScreen="signin"
               onAuthSuccess={handleLogin}
