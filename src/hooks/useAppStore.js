@@ -207,7 +207,7 @@ export function useAppStore() {
     loadDbData();
   };
 
-  const handleSendMessage = async (conversationId, text) => {
+  const handleSendMessage = async (conversationId, text, image = null) => {
     const senderName = currentUser?.name || 'Student';
     const senderId = currentUser?.id || 'me';
     
@@ -216,7 +216,8 @@ export function useAppStore() {
       id: 'msg-' + Date.now(),
       senderId: senderId,
       senderName: senderName,
-      text: text,
+      text: text || '',
+      image: image || null,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       isRead: true
     };
@@ -225,7 +226,7 @@ export function useAppStore() {
       if (c.id === conversationId) {
         return {
           ...c,
-          lastMessageText: text,
+          lastMessageText: text || (image ? '📷 Sent an image' : ''),
           lastMessageTime: 'Just now',
           messages: [...(c.messages || []), newMsg]
         };
@@ -233,7 +234,7 @@ export function useAppStore() {
       return c;
     }));
 
-    await api.sendMessage(conversationId, text, senderName, senderId).catch(() => {});
+    await api.sendMessage(conversationId, text, senderName, senderId, image).catch(() => {});
     loadDbData();
   };
 
@@ -369,7 +370,16 @@ export function useAppStore() {
 
   const handleOpenChat = (chatId) => {
     setActiveConversationId(chatId);
-    setConversations(prev => prev.map(c => c.id === chatId ? { ...c, unreadCount: 0 } : c));
+    setConversations(prev => prev.map(c => {
+      if (c.id === chatId) {
+        return {
+          ...c,
+          unreadCount: 0,
+          messages: (c.messages || []).map(m => ({ ...m, isRead: true }))
+        };
+      }
+      return c;
+    }));
     setCurrentTab('messages');
   };
 
@@ -439,7 +449,15 @@ export function useAppStore() {
     ? validNotifications
     : validNotifications.filter(n => n && n.userId === currentUser?.id);
 
-  const unreadMessagesCount = (userConversations || []).reduce((acc, conv) => acc + (conv?.unreadCount || 0), 0);
+  const unreadMessagesCount = (userConversations || []).reduce((acc, conv) => {
+    if (conv?.messages && Array.isArray(conv.messages) && conv.messages.length > 0) {
+      const unread = conv.messages.filter(m => 
+        !m.isRead && m.senderId !== 'me' && m.senderId !== currentUser?.id && m.senderId !== 'system'
+      ).length;
+      return acc + unread;
+    }
+    return acc + (conv?.unreadCount || 0);
+  }, 0);
 
   return {
     currentUser,

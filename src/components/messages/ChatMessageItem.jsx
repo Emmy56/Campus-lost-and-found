@@ -30,7 +30,19 @@ export default function ChatMessageItem({ message, currentUser }) {
               : 'bg-gray-100 text-gray-900 border border-gray-200 rounded-tl-none shadow-sm'
           }`}
         >
-          <p className="leading-relaxed whitespace-pre-line">{message.text}</p>
+          {message.image && (
+            <div className="mb-2 overflow-hidden rounded-xl">
+              <img
+                src={message.image}
+                alt="Attachment"
+                className="max-h-60 max-w-full object-cover rounded-xl cursor-pointer hover:opacity-95 transition-opacity"
+                onClick={() => window.open(message.image, '_blank')}
+              />
+            </div>
+          )}
+          {message.text && (
+            <p className="leading-relaxed whitespace-pre-line">{message.text}</p>
+          )}
         </div>
 
         {/* Timestamp */}

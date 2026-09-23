@@ -364,7 +364,8 @@ app.get('/api/conversations', async (req, res) => {
         id: m.id,
         senderId: m.senderId,
         senderName: m.senderName,
-        text: m.text,
+        text: m.text || '',
+        image: m.image || null,
         timestamp: m.timestamp,
         isRead: Boolean(m.isRead)
       }))
@@ -379,7 +380,7 @@ app.get('/api/conversations', async (req, res) => {
 app.post('/api/conversations/:id/messages', async (req, res) => {
   try {
     const conversationId = req.params.id;
-    const { text, senderName, senderId } = req.body;
+    const { text, senderName, senderId, image } = req.body;
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const userMsgId = 'msg-' + Date.now();
 
@@ -388,7 +389,8 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
       conversationId,
       senderId: senderId || 'me',
       senderName: senderName || 'Student',
-      text,
+      text: text || '',
+      image: image || null,
       timestamp: timeStr,
       isRead: false,
       createdAt: new Date().toISOString()
@@ -397,7 +399,7 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
     await dbMessages.create(newMsg);
 
     await dbConversations.update(conversationId, {
-      lastMessageText: text,
+      lastMessageText: text || (image ? '📷 Sent an image' : ''),
       lastMessageTime: 'Just now'
     });
 
