@@ -30,6 +30,8 @@ export function useAppStore() {
     return 'signin';
   });
 
+  const [users, setUsers] = useState([defaultUser, defaultAdmin]);
+
   // Sync state to localStorage whenever changed
   useEffect(() => {
     if (currentUser) {
