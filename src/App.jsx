@@ -22,7 +22,6 @@ export default function App() {
     activeConversationId,
     setActiveConversationId,
     setReportType,
-    stats,
     unreadMessagesCount,
     handleLogin,
     handleLogout,
@@ -35,16 +34,18 @@ export default function App() {
     handleToggleBanUser,
     handleMarkAllNotificationsRead,
     handleNotificationClick,
-    handleOpenChat,
-    handleConnectFromFind
+    handleOpenChat
   } = useAppStore();
+
+  const protectedTabs = ['dashboard', 'messages', 'report-lost', 'report-found', 'admin'];
+  const activeTab = (!currentUser && protectedTabs.includes(currentTab)) ? 'signin' : currentTab;
 
   const handleTabChange = (tab) => {
     if (tab === 'landing') {
       setCurrentTab(currentUser ? 'dashboard' : 'signin');
       return;
     }
-    if (!currentUser && (tab === 'dashboard' || tab === 'messages' || tab === 'report-lost' || tab === 'report-found' || tab === 'admin')) {
+    if (!currentUser && protectedTabs.includes(tab)) {
       setCurrentTab('signin');
     } else {
       setCurrentTab(tab);
@@ -66,7 +67,7 @@ export default function App() {
         {/* Header Navigation */}
         <Header
           currentUser={currentUser}
-          currentTab={currentTab}
+          currentTab={activeTab}
           onTabChange={handleTabChange}
           onLogout={handleLogout}
           unreadMessagesCount={unreadMessagesCount}
@@ -77,8 +78,7 @@ export default function App() {
 
         {/* Dynamic Route Switch Panel */}
         <main className="animate-fade-in duration-300">
-
-          {currentTab === 'dashboard' && currentUser && (
+          {activeTab === 'dashboard' && currentUser && (
             <Dashboard
               currentUser={currentUser}
               items={items}
@@ -90,22 +90,20 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'messages' && currentUser && (
+          {activeTab === 'messages' && currentUser && (
             <Messages
               currentUser={currentUser}
               conversations={conversations}
               matches={matches}
               activeConversationId={activeConversationId}
-              onSelectConversation={(id) => {
-                setActiveConversationId(id);
-              }}
+              onSelectConversation={(id) => setActiveConversationId(id)}
               onSendMessage={handleSendMessage}
               onConfirmMatchInChat={(matchId) => handleUpdateMatchStatus(matchId, 'confirmed')}
               onBackToDashboard={() => setCurrentTab('dashboard')}
             />
           )}
 
-          {currentTab === 'report-lost' && currentUser && (
+          {activeTab === 'report-lost' && currentUser && (
             <ReportForm
               type="lost"
               onCancel={() => setCurrentTab('dashboard')}
@@ -113,7 +111,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'report-found' && currentUser && (
+          {activeTab === 'report-found' && currentUser && (
             <ReportForm
               type="found"
               onCancel={() => setCurrentTab('dashboard')}
@@ -121,7 +119,7 @@ export default function App() {
             />
           )}
 
-          {(currentTab === 'signin' || (!currentUser && currentTab !== 'signup' && currentTab !== 'about')) && (
+          {activeTab === 'signin' && (
             <Auth
               initialScreen="signin"
               onAuthSuccess={handleLogin}
@@ -129,7 +127,7 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'signup' && (
+          {activeTab === 'signup' && (
             <Auth
               initialScreen="signup"
               onAuthSuccess={handleLogin}
@@ -137,11 +135,9 @@ export default function App() {
             />
           )}
 
-          {currentTab === 'about' && <About />}
+          {activeTab === 'about' && <About />}
 
-
-
-          {currentTab === 'admin' && currentUser?.role === 'admin' && (
+          {activeTab === 'admin' && currentUser?.role === 'admin' && (
             <AdminPanel
               items={items}
               users={users}

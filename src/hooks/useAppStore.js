@@ -9,7 +9,7 @@ export function useAppStore() {
       const saved = localStorage.getItem('clf_user');
       if (saved) {
         const parsed = JSON.parse(saved);
-        return (parsed && parsed.email) ? parsed : null;
+        return (parsed && (parsed.id || parsed.email)) ? parsed : null;
       }
       return null;
     } catch (e) {
@@ -22,7 +22,7 @@ export function useAppStore() {
       const savedUser = localStorage.getItem('clf_user');
       if (savedUser) {
         const user = JSON.parse(savedUser);
-        if (user && user.email) {
+        if (user && (user.id || user.email)) {
           return user.role === 'admin' ? 'admin' : 'dashboard';
         }
       }
@@ -36,11 +36,8 @@ export function useAppStore() {
       localStorage.setItem('clf_user', JSON.stringify(currentUser));
     } else {
       localStorage.removeItem('clf_user');
-      if (['dashboard', 'messages', 'report-lost', 'report-found', 'admin'].includes(currentTab)) {
-        setCurrentTab('signin');
-      }
     }
-  }, [currentUser, currentTab]);
+  }, [currentUser]);
   
   const [items, setItems] = useState(() => {
     try {
