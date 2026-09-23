@@ -78,15 +78,6 @@ export function useAppStore() {
   const [activeConversationId, setActiveConversationId] = useState('');
   const [reportType, setReportType] = useState('lost');
 
-  // Sync state to localStorage whenever changed
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('clf_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('clf_user');
-    }
-  }, [currentUser]);
-
   useEffect(() => {
     localStorage.setItem('clf_items', JSON.stringify(items));
   }, [items]);

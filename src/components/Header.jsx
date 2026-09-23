@@ -144,20 +144,26 @@ export default function Header({
                   }}
                   className="w-10 h-10 rounded-full bg-blue-600 hover:bg-blue-700 text-white transition-colors cursor-pointer flex items-center justify-center font-bold text-sm shadow-sm"
                 >
-                  {currentUser.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                  {(currentUser?.name || currentUser?.email || 'Student')
+                    .split(' ')
+                    .filter(Boolean)
+                    .map(n => n[0])
+                    .join('')
+                    .substring(0, 2)
+                    .toUpperCase()}
                 </button>
 
                 {showProfileMenu && (
                   <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-gray-100 py-2 z-50 animate-fade-in">
                     <div className="px-4 py-3 border-b border-gray-100 space-y-1">
                       <div className="flex justify-between items-center">
-                        <p className="font-extrabold text-sm text-gray-900">{currentUser.name}</p>
-                        {currentUser.role === 'admin' && (
+                        <p className="font-extrabold text-sm text-gray-900">{currentUser?.name || 'OAU Student'}</p>
+                        {currentUser?.role === 'admin' && (
                           <span className="text-[9px] bg-slate-900 text-white font-bold px-2 py-0.5 rounded">ADMIN</span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400 truncate">{currentUser.email}</p>
-                      <p className="text-[10px] text-gray-500 font-mono">Matric: {currentUser.matricNumber}</p>
+                      <p className="text-xs text-gray-400 truncate">{currentUser?.email || ''}</p>
+                      <p className="text-[10px] text-gray-500 font-mono">Matric: {currentUser?.matricNumber || 'N/A'}</p>
                     </div>
                     
                     <button
