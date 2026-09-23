@@ -416,23 +416,28 @@ export function useAppStore() {
 
   const isUserAdmin = currentUser?.role === 'admin';
 
+  const validItems = (items || []).filter(Boolean);
+  const validMatches = (matches || []).filter(Boolean);
+  const validConversations = (conversations || []).filter(Boolean);
+  const validNotifications = (notifications || []).filter(Boolean);
+
   const userItems = isUserAdmin
-    ? items
-    : items.filter(i => i.userId === currentUser?.id);
+    ? validItems
+    : validItems.filter(i => i && i.userId === currentUser?.id);
 
   const userMatches = isUserAdmin
-    ? matches
-    : matches.filter(m => userItems.some(i => i.id === m.userItemId || i.id === m.matchedItemId));
+    ? validMatches
+    : validMatches.filter(m => m && (userItems || []).some(i => i && (i.id === m.userItemId || i.id === m.matchedItemId)));
 
   const userConversations = isUserAdmin
-    ? conversations
-    : conversations.filter(c => userMatches.some(m => m.chatId === c.id || m.id === c.matchId) || c.participants?.some(p => p.id === currentUser?.id));
+    ? validConversations
+    : validConversations.filter(c => c && ((userMatches || []).some(m => m && (m.chatId === c.id || m.id === c.matchId)) || (c.participants && c.participants.some(p => p && p.id === currentUser?.id))));
 
   const userNotifications = isUserAdmin
-    ? notifications
-    : notifications.filter(n => n.userId === currentUser?.id);
+    ? validNotifications
+    : validNotifications.filter(n => n && n.userId === currentUser?.id);
 
-  const unreadMessagesCount = userConversations.reduce((acc, conv) => acc + (conv.unreadCount || 0), 0);
+  const unreadMessagesCount = (userConversations || []).reduce((acc, conv) => acc + (conv?.unreadCount || 0), 0);
 
   return {
     currentUser,

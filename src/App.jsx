@@ -26,27 +26,40 @@ class ErrorBoundary extends Component {
   handleResetSession = () => {
     try {
       localStorage.clear();
+      sessionStorage.clear();
     } catch (e) {}
-    window.location.reload();
+    this.setState({ hasError: false, error: null });
+    window.location.href = window.location.origin;
   };
 
   render() {
     if (this.state.hasError) {
       return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6 text-center font-sans">
-          <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-xl max-w-md space-y-4">
-            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto font-bold text-lg">
-              CLF
+          <div className="bg-white p-8 rounded-2xl border border-gray-100 shadow-xl max-w-lg space-y-4 text-left">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-extrabold text-sm shadow-md">
+                CLF
+              </div>
+              <div>
+                <h2 className="text-lg font-extrabold text-gray-900">Campus Lost & Found</h2>
+                <p className="text-xs text-gray-500">Application Error Guard</p>
+              </div>
             </div>
-            <h2 className="text-xl font-extrabold text-gray-900">Campus Lost & Found</h2>
+            
+            <div className="p-3.5 bg-red-50 border border-red-200 rounded-xl space-y-1">
+              <p className="text-xs font-bold text-red-700">Captured Diagnostic Details:</p>
+              <p className="text-xs font-mono text-red-600 break-words">{this.state.error?.toString()}</p>
+            </div>
+
             <p className="text-xs text-gray-500 leading-relaxed">
-              A temporary browser session conflict occurred. Click below to clear stored local cache and restore the portal.
+              Click below to clear stored local browser cache and reload the portal cleanly.
             </p>
             <button
               onClick={this.handleResetSession}
               className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-colors"
             >
-              Reset Session & Load Web App
+              Clear Cache & Restore Portal
             </button>
           </div>
         </div>
