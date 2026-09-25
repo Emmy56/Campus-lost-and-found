@@ -4,9 +4,14 @@ import { CheckCircle2 } from 'lucide-react';
 export default function ChatHeader({
   conversation,
   associatedMatch,
-  onConfirmMatchInChat
+  onConfirmMatchInChat,
+  currentUser,
+  users = []
 }) {
-  const partner = conversation.participants[0];
+  const partner = conversation?.participants?.find(p => p.id !== currentUser?.id) || conversation?.participants?.[0];
+  const partnerUser = users?.find(u => u.id === partner?.id || u.email === partner?.email);
+  const isOnline = Boolean(partner?.online === true || partnerUser?.isOnline === true || partnerUser?.online === true);
+
   const initials = partner?.name
     ? partner.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : 'U';
@@ -18,7 +23,7 @@ export default function ChatHeader({
           <div className="w-10 h-10 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center">
             {initials}
           </div>
-          {partner?.online && (
+          {isOnline && (
             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full" />
           )}
         </div>
@@ -27,7 +32,7 @@ export default function ChatHeader({
             {conversation.title}
           </h3>
           <p className="text-[11px] text-gray-400 font-medium mt-0.5">
-            {partner?.online ? 'Online' : 'Offline'}
+            {isOnline ? 'Online' : 'Offline'}
           </p>
         </div>
       </div>

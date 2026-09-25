@@ -14,6 +14,7 @@ export const defaultAdmin = {
   matricNumber: 'ADMIN/OAU/001',
   studentId: 'ADMIN/OAU/001',
   email: 'admin@student.oauife.edu.ng',
+  password: 'admin001',
   role: 'admin',
   isBanned: false
 };

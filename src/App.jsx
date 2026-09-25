@@ -153,6 +153,7 @@ function MainApp() {
           {activeTab === 'messages' && currentUser && (
             <Messages
               currentUser={currentUser}
+              users={users}
               conversations={conversations}
               matches={matches}
               activeConversationId={activeConversationId}

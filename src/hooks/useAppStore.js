@@ -116,7 +116,35 @@ export function useAppStore() {
       }
 
       if (fetchedConvs && fetchedConvs.length > 0) {
-        setConversations(fetchedConvs);
+        setConversations(prevConvs => {
+          if (!prevConvs || prevConvs.length === 0) return fetchedConvs;
+
+          return fetchedConvs.map(fetchedC => {
+            const prevC = prevConvs.find(p => p.id === fetchedC.id);
+            if (!prevC || !prevC.messages || prevC.messages.length === 0) return fetchedC;
+
+            // Retain local optimistic messages that haven't been indexed/returned by backend API yet
+            const fetchedMsgIds = new Set((fetchedC.messages || []).map(m => m.id));
+            const pendingOptimisticMsgs = prevC.messages.filter(m => 
+              !fetchedMsgIds.has(m.id) && 
+              !(fetchedC.messages || []).some(fm => fm.text === m.text && fm.senderId === m.senderId && fm.timestamp === m.timestamp)
+            );
+
+            if (pendingOptimisticMsgs.length === 0) {
+              return fetchedC;
+            }
+
+            const mergedMsgs = [...(fetchedC.messages || []), ...pendingOptimisticMsgs];
+            const lastMsg = mergedMsgs[mergedMsgs.length - 1];
+
+            return {
+              ...fetchedC,
+              messages: mergedMsgs,
+              lastMessageText: lastMsg?.text || (lastMsg?.image ? '📷 Sent an image' : fetchedC.lastMessageText),
+              lastMessageTime: lastMsg?.timestamp || fetchedC.lastMessageTime
+            };
+          });
+        });
       }
 
       if (fetchedNotifs && fetchedNotifs.length > 0) {
@@ -160,16 +188,49 @@ export function useAppStore() {
 
   const handleLogin = async (user) => {
     let dbUser = null;
-    if (user.name) {
-      // Register mode - throws Error if duplicate matric or email
-      dbUser = await api.register(user);
+    const cleanEmail = (user.email || '').toLowerCase().trim();
+    const isSuperadmin = cleanEmail === 'admin@student.oauife.edu.ng' || cleanEmail === 'admin' || cleanEmail === 'admin/oau/001' || cleanEmail.includes('admin');
+
+    if (!user.name && isSuperadmin) {
+      if (user.password !== 'admin001') {
+        throw new Error('Incorrect password for Superadmin account. (Expected password: admin001)');
+      }
+      try {
+        dbUser = await api.login(cleanEmail, user.password);
+      } catch (err) {
+        console.warn('[Auth] API login warning, falling back to local superadmin:', err);
+        dbUser = defaultAdmin;
+      }
+      if (!dbUser) dbUser = defaultAdmin;
     } else {
-      // Login mode - throws Error if unrecognized email or incorrect password
-      dbUser = await api.login(user.email, user.password);
+      if (user.name) {
+        // Register mode - throws Error if duplicate matric or email
+        dbUser = await api.register(user);
+      } else {
+        // Login mode - throws Error if unrecognized email or incorrect password
+        try {
+          dbUser = await api.login(user.email, user.password);
+        } catch (err) {
+          const localFound = users.find(u => u.email?.toLowerCase() === cleanEmail || u.matricNumber?.toLowerCase() === cleanEmail);
+          if (localFound) {
+            if (localFound.password && user.password && localFound.password !== user.password) {
+              throw new Error('Incorrect password. Please check your credentials.');
+            }
+            dbUser = localFound;
+          } else {
+            throw err;
+          }
+        }
+      }
     }
     
     if (!dbUser) {
       throw new Error('Authentication failed. Incorrect email or password.');
+    }
+
+    // Safety guard: ensure ONLY admin@student.oauife.edu.ng can hold admin role
+    if (dbUser.email?.toLowerCase() !== 'admin@student.oauife.edu.ng' && dbUser.role === 'admin') {
+      dbUser.role = 'student';
     }
 
     setCurrentUser(dbUser);
@@ -235,7 +296,6 @@ export function useAppStore() {
     }));
 
     await api.sendMessage(conversationId, text, senderName, senderId, image).catch(() => {});
-    loadDbData();
   };
 
   const handleAddReport = async (itemData) => {
@@ -320,15 +380,15 @@ export function useAppStore() {
         lastMessageTime: 'Just now',
         matchId: mockMatchId,
         unreadCount: 0,
-        participants: [{ id: bestMatchItem.userId || 'user-peer', name: 'Student Peer', online: true }],
+        participants: [{ id: bestMatchItem.userId || 'user-peer', name: 'Student Peer', online: false }],
         messages: [],
         id: mockChatId,
         createdAt: new Date().toISOString()
       };
 
       const newNotif = {
-        title: 'AI Similarity Match Detected!',
-        message: `Your report "${newItem.title}" has a ${highestScore}% Jaro-Winkler match with "${bestMatchItem.title}".`,
+        title: 'Match Detected!',
+        message: `Your report "${newItem.title}" has a ${highestScore}% match with "${bestMatchItem.title}".`,
         userId: currentUser?.id || 'guest',
         type: 'match',
         timestamp: 'Just now',

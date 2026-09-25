@@ -107,15 +107,20 @@ function computeMatchScore(item1, item2) {
 // 1. Auth: Register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, matricNumber, email, password, role } = req.body;
+    const { name, matricNumber, email, password } = req.body;
     
-    // Validate OAU Student email
-    if (!email || !email.toLowerCase().endsWith('@student.oauife.edu.ng')) {
-      return res.status(400).json({ error: 'Registration is restricted to valid @student.oauife.edu.ng emails.' });
+    const matricUpper = (matricNumber || '').toUpperCase().trim();
+    const emailLower = (email || '').toLowerCase().trim();
+
+    // Prevent creating admin account or registering reserved superadmin email/matric
+    if (emailLower === 'admin@student.oauife.edu.ng' || matricUpper === 'ADMIN/OAU/001' || emailLower === 'admin') {
+      return res.status(400).json({ error: 'The email admin@student.oauife.edu.ng is reserved exclusively for Superadmin access and cannot be registered.' });
     }
 
-    const matricUpper = (matricNumber || '').toUpperCase().trim();
-    const emailLower = email.toLowerCase().trim();
+    // Validate OAU Student email
+    if (!emailLower || !emailLower.endsWith('@student.oauife.edu.ng')) {
+      return res.status(400).json({ error: 'Registration is restricted to valid @student.oauife.edu.ng emails.' });
+    }
 
     const existingMatric = await dbUsers.find(matricUpper);
     const existingEmail = await dbUsers.find(emailLower);
@@ -132,7 +137,7 @@ app.post('/api/auth/register', async (req, res) => {
       studentId: matricUpper,
       email: emailLower,
       password: password || '',
-      role: role || 'student',
+      role: 'student', // Strictly forced to 'student'. Admin creation from sign up is prohibited.
       isBanned: false,
       createdAt: new Date().toISOString()
     };
@@ -148,8 +153,42 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { email, matricNumber, password } = req.body;
-    const term = (email || matricNumber || '').trim();
+    const term = (email || matricNumber || '').trim().toLowerCase();
+    const isSuperadminLogin = term === 'admin@student.oauife.edu.ng' || term === 'admin/oau/001' || term === 'admin' || term.includes('admin');
 
+    // Superadmin Portal authentication check
+    if (isSuperadminLogin) {
+      if (password !== 'admin001') {
+        return res.status(400).json({ error: 'Incorrect password for Superadmin account.' });
+      }
+
+      let adminUser = await dbUsers.find('admin@student.oauife.edu.ng');
+      if (!adminUser) {
+        adminUser = {
+          id: 'user-admin',
+          name: 'OAU Admin Moderation',
+          matricNumber: 'ADMIN/OAU/001',
+          studentId: 'ADMIN/OAU/001',
+          email: 'admin@student.oauife.edu.ng',
+          password: 'admin001',
+          role: 'admin',
+          isBanned: false
+        };
+        await dbUsers.create(adminUser).catch(() => {});
+      }
+      return res.json({
+        id: adminUser.id || 'user-admin',
+        name: adminUser.name || 'OAU Admin Moderation',
+        matricNumber: 'ADMIN/OAU/001',
+        studentId: 'ADMIN/OAU/001',
+        email: 'admin@student.oauife.edu.ng',
+        password: 'admin001',
+        role: 'admin',
+        isBanned: false
+      });
+    }
+
+    // Standard user login
     const user = await dbUsers.find(term);
     if (user) {
       if (user.isBanned) {
@@ -158,6 +197,10 @@ app.post('/api/auth/login', async (req, res) => {
       if (user.password && password && user.password !== password) {
         return res.status(400).json({ error: 'Incorrect password. Please check your credentials.' });
       }
+
+      // Restrict role to 'student' for any non-superadmin email
+      const effectiveRole = (user.email && user.email.toLowerCase() === 'admin@student.oauife.edu.ng') ? 'admin' : 'student';
+
       return res.json({
         id: user.id,
         name: user.name,
@@ -165,7 +208,7 @@ app.post('/api/auth/login', async (req, res) => {
         studentId: user.studentId || user.matricNumber,
         email: user.email,
         password: user.password,
-        role: user.role,
+        role: effectiveRole,
         isBanned: Boolean(user.isBanned)
       });
     }
@@ -277,8 +320,8 @@ app.post('/api/items', async (req, res) => {
 
       const notifId = 'notif-' + Date.now();
       const newNotif = {
-        title: 'AI Similarity Match Detected!',
-        message: `Your report "${title}" has a ${highestScore}% Jaro-Winkler match with "${bestMatch.title}".`,
+        title: 'Match Detected!',
+        message: `Your report "${title}" has a ${highestScore}% match with "${bestMatch.title}".`,
         userId: userId || 'guest',
         type: 'match',
         timestamp: 'Just now',
@@ -357,9 +400,9 @@ app.get('/api/conversations', async (req, res) => {
       lastMessageText: c.lastMessageText || '',
       lastMessageTime: c.lastMessageTime || '',
       matchId: c.matchId,
-      participants: [
-        { id: 'user-peer', name: 'Student Peer', online: true }
-      ],
+      participants: c.participants && c.participants.length > 0
+        ? c.participants.map(p => ({ ...p, online: Boolean(p.online) }))
+        : [{ id: 'user-peer', name: 'Student Peer', online: false }],
       messages: (c.messages || []).map(m => ({
         id: m.id,
         senderId: m.senderId,

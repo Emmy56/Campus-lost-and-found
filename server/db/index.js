@@ -83,8 +83,8 @@ export async function initDb() {
   const existingAdmin = await query('SELECT * FROM users WHERE role = ?', ['admin']);
   if (existingAdmin.length === 0) {
     await run(
-      'INSERT INTO users (id, name, matric_number, student_id, email, role, is_banned) VALUES (?, ?, ?, ?, ?, ?, ?)',
-      ['user-admin', 'OAU Admin Moderation', 'ADMIN/OAU/001', 'ADMIN/OAU/001', 'admin@student.oauife.edu.ng', 'admin', false]
+      'INSERT INTO users (id, name, matric_number, student_id, email, password, role, is_banned) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      ['user-admin', 'OAU Admin Moderation', 'ADMIN/OAU/001', 'ADMIN/OAU/001', 'admin@student.oauife.edu.ng', 'admin001', 'admin', false]
     );
   }
   

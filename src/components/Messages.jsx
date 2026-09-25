@@ -6,6 +6,7 @@ import ChatHeader from './messages/ChatHeader';
 
 export default function Messages({
   currentUser,
+  users = [],
   conversations = [],
   matches = [],
   activeConversationId,
@@ -129,6 +130,8 @@ export default function Messages({
                   conversation={conv}
                   isActive={conv.id === activeConversation?.id}
                   onSelect={onSelectConversation}
+                  currentUser={currentUser}
+                  users={users}
                 />
               ))
             )}
@@ -144,6 +147,8 @@ export default function Messages({
                 conversation={activeConversation}
                 associatedMatch={associatedMatch}
                 onConfirmMatchInChat={onConfirmMatchInChat}
+                currentUser={currentUser}
+                users={users}
               />
 
               {/* Message History area (Scrollable vertically without jumping the window page) */}

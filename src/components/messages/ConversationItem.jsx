@@ -3,9 +3,14 @@ import React from 'react';
 export default function ConversationItem({
   conversation,
   isActive,
-  onSelect
+  onSelect,
+  currentUser,
+  users = []
 }) {
-  const partner = conversation.participants[0];
+  const partner = conversation?.participants?.find(p => p.id !== currentUser?.id) || conversation?.participants?.[0];
+  const partnerUser = users?.find(u => u.id === partner?.id || u.email === partner?.email);
+  const isOnline = Boolean(partner?.online === true || partnerUser?.isOnline === true || partnerUser?.online === true);
+
   const initials = partner?.name
     ? partner.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
     : 'U';
@@ -22,7 +27,7 @@ export default function ConversationItem({
         <div className="w-11 h-11 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center border border-blue-700">
           {initials}
         </div>
-        {partner?.online && (
+        {isOnline && (
           <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
         )}
       </div>

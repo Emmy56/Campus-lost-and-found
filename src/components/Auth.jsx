@@ -39,8 +39,17 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
           return;
         }
 
+        const cleanEmail = email.toLowerCase().trim();
+
+        // Prevent registration of reserved superadmin email
+        if (cleanEmail === 'admin@student.oauife.edu.ng' || cleanMatric === 'ADMIN/OAU/001') {
+          setErrorMsg('The email admin@student.oauife.edu.ng is reserved exclusively for Superadmin access and cannot be registered.');
+          setLoading(false);
+          return;
+        }
+
         // Strict OAU Student Email Validation: ONLY @student.oauife.edu.ng
-        const isOauStudentEmail = email.toLowerCase().trim().endsWith('@student.oauife.edu.ng');
+        const isOauStudentEmail = cleanEmail.endsWith('@student.oauife.edu.ng');
         if (!isOauStudentEmail) {
           setErrorMsg('Registration is restricted exclusively to valid OAU student emails ending with @student.oauife.edu.ng');
           setLoading(false);
@@ -57,7 +66,7 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
           name: fullname,
           matricNumber: cleanMatric,
           studentId: cleanMatric,
-          email: email.toLowerCase().trim(),
+          email: cleanEmail,
           password: password,
           role: 'student'
         };
@@ -70,7 +79,13 @@ export default function Auth({ initialScreen, onAuthSuccess, onSwitchScreen }) {
         }
         
         const cleanEmail = email.toLowerCase().trim();
-        const isAdminEmail = cleanEmail === 'admin@student.oauife.edu.ng' || cleanEmail === 'admin';
+        const isAdminEmail = cleanEmail === 'admin@student.oauife.edu.ng' || cleanEmail === 'admin' || cleanEmail === 'admin/oau/001' || cleanEmail.includes('admin');
+
+        if (isAdminEmail && password !== 'admin001') {
+          setErrorMsg('Incorrect password for Superadmin account. (Hint: password is admin001)');
+          setLoading(false);
+          return;
+        }
 
         if (!isAdminEmail && !cleanEmail.endsWith('@student.oauife.edu.ng')) {
           setErrorMsg('Sign in requires a valid @student.oauife.edu.ng email address.');

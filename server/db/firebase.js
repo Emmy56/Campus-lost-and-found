@@ -8,7 +8,7 @@ const memoryStore = {
       matricNumber: 'ADMIN/OAU/001',
       studentId: 'ADMIN/OAU/001',
       email: 'admin@student.oauife.edu.ng',
-      password: '',
+      password: 'admin001',
       role: 'admin',
       isBanned: false,
       createdAt: new Date().toISOString()
