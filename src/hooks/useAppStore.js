@@ -408,7 +408,7 @@ export function useAppStore() {
         message: `Your report "${newItem.title}" has a ${highestScore}% match with "${bestMatchItem.title}".`,
         userId: currentUser?.id || 'guest',
         type: 'match',
-        timestamp: 'Just now',
+        timestamp: new Date().toISOString(),
         read: false,
         linkTab: 'dashboard',
         id: 'notif-' + Date.now(),

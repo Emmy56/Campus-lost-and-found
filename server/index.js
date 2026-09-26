@@ -324,7 +324,7 @@ app.post('/api/items', async (req, res) => {
         message: `Your report "${title}" has a ${highestScore}% match with "${bestMatch.title}".`,
         userId: userId || 'guest',
         type: 'match',
-        timestamp: 'Just now',
+        timestamp: new Date().toISOString(),
         read: false,
         linkTab: 'dashboard',
         id: notifId,

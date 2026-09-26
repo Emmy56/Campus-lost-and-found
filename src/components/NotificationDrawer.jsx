@@ -1,5 +1,6 @@
 import React from 'react';
 import { Bell, Sparkles, MessageSquare, CheckCheck } from 'lucide-react';
+import { formatTimeAgo } from '../utils/timeFormatter.js';
 
 export default function NotificationDrawer({
   notifications = [],
@@ -55,7 +56,7 @@ export default function NotificationDrawer({
               <div className="flex-1 min-w-0 space-y-0.5">
                 <div className="flex justify-between items-baseline">
                   <h4 className="font-bold text-gray-900 text-xs truncate">{n.title}</h4>
-                  <span className="text-[10px] text-gray-400 whitespace-nowrap">{n.timestamp}</span>
+                  <span className="text-[10px] text-gray-400 whitespace-nowrap">{formatTimeAgo(n.createdAt || n.timestamp)}</span>
                 </div>
                 <p className="text-xs text-gray-600 leading-snug line-clamp-2">{n.message}</p>
               </div>
