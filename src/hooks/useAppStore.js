@@ -149,7 +149,14 @@ export function useAppStore() {
       }
 
       if (fetchedNotifs && fetchedNotifs.length > 0) {
-        setNotifications(fetchedNotifs);
+        setNotifications(prevNotifs => {
+          if (!prevNotifs || prevNotifs.length === 0) return fetchedNotifs;
+          const readIds = new Set(prevNotifs.filter(n => n.read).map(n => n.id));
+          return fetchedNotifs.map(n => ({
+            ...n,
+            read: n.read || readIds.has(n.id)
+          }));
+        });
       }
 
       if (fetchedUsers && fetchedUsers.length > 0) {

@@ -3,6 +3,7 @@ import { ArrowLeft, Search, Send, MessageSquare, Image, X } from 'lucide-react';
 import ConversationItem from './messages/ConversationItem';
 import ChatMessageItem from './messages/ChatMessageItem';
 import ChatHeader from './messages/ChatHeader';
+import { compressImage } from '../utils/imageCompressor';
 
 export default function Messages({
   currentUser,
@@ -40,26 +41,22 @@ export default function Messages({
     }
   }, [activeConversation?.messages?.length, activeConversation?.id]);
 
-  const handleImageSelect = (e) => {
+  const handleImageSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      alert('Please select an image file (PNG, JPG, JPEG, WEBP).');
+      alert('Please select a valid image file (PNG, JPG, JPEG, WEBP).');
       return;
     }
 
-    // Limit file size to ~5MB
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Image size should be under 5MB.');
-      return;
+    try {
+      const compressedDataUrl = await compressImage(file, 800, 800, 0.7);
+      setSelectedImage(compressedDataUrl);
+    } catch (err) {
+      console.error('[Messages] Image compression error:', err);
+      alert('Could not process this image file. Please try selecting another image.');
     }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setSelectedImage(reader.result);
-    };
-    reader.readAsDataURL(file);
   };
 
   const handleRemoveImage = () => {
