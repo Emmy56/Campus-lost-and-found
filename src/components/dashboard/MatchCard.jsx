@@ -55,28 +55,21 @@ export default function MatchCard({
       {/* Action States */}
       <div className="shrink-0 flex flex-col sm:flex-row xl:flex-col gap-2.5 min-w-[170px] justify-center">
         {match.status === 'pending' && (
-          isFinder ? (
-            <div className="px-3.5 py-2.5 bg-blue-50 border border-blue-100 text-blue-700 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 text-center shadow-xs">
-              <Clock className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-              <span>Awaiting owner to message</span>
-            </div>
-          ) : (
-            <>
-              <button
-                onClick={() => onOpenChat(match.chatId)}
-                className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                Message Finder
-              </button>
-              <button
-                onClick={() => onUpdateMatchStatus(match.id, 'rejected')}
-                className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-              >
-                Not a Match
-              </button>
-            </>
-          )
+          <>
+            <button
+              onClick={() => onOpenChat(match.chatId, match)}
+              className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              {isFinder ? 'Message Owner' : 'Message Finder'}
+            </button>
+            <button
+              onClick={() => onUpdateMatchStatus(match.id, 'rejected')}
+              className="px-4 py-2 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+            >
+              Not a Match
+            </button>
+          </>
         )}
 
         {match.status === 'confirmed' && (
@@ -87,7 +80,7 @@ export default function MatchCard({
             </span>
 
             <button
-              onClick={() => onOpenChat(match.chatId)}
+              onClick={() => onOpenChat(match.chatId, match)}
               className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
             >
               View Chat

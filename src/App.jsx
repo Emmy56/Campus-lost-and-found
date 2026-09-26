@@ -81,13 +81,16 @@ function MainApp() {
     notifications,
     activeConversationId,
     setActiveConversationId,
+    reportType,
     setReportType,
+    dashboardSubTab,
     unreadMessagesCount,
     handleLogin,
     handleLogout,
     handleUpdateMatchStatus,
     handleSendMessage,
     handleAddReport,
+    handleUpdateItem,
     handleFlagItem,
     handleDismissFlag,
     handleRemoveItem,
@@ -143,8 +146,10 @@ function MainApp() {
               currentUser={currentUser}
               items={items}
               matches={matches}
+              initialSubTab={dashboardSubTab}
               onStartReporting={handleStartReporting}
-              onEditItem={(item) => alert(`Editing "${item.title}" details.`)}
+              onUpdateItem={handleUpdateItem}
+              onDeleteItem={handleRemoveItem}
               onUpdateMatchStatus={handleUpdateMatchStatus}
               onOpenChat={handleOpenChat}
             />

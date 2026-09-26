@@ -1,18 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LoggedItemCard from './dashboard/LoggedItemCard.jsx';
 import MatchCard from './dashboard/MatchCard.jsx';
 import EmptyDashboardState from './dashboard/EmptyDashboardState.jsx';
+import EditItemModal from './dashboard/EditItemModal.jsx';
 
 export default function Dashboard({
   currentUser,
   items = [],
   matches = [],
+  initialSubTab = 'logged-items',
   onStartReporting,
-  onEditItem,
+  onUpdateItem,
+  onDeleteItem,
   onUpdateMatchStatus,
   onOpenChat
 }) {
-  const [activeTab, setActiveTab] = useState('logged-items');
+  const [activeTab, setActiveTab] = useState(initialSubTab);
+  const [editingItem, setEditingItem] = useState(null);
+
+  useEffect(() => {
+    if (initialSubTab) {
+      setActiveTab(initialSubTab);
+    }
+  }, [initialSubTab]);
 
   const myItems = items.filter(item => item.userId === currentUser?.id);
   const myMatches = matches.filter(match => 
@@ -90,7 +100,12 @@ export default function Dashboard({
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {myItems.map(item => (
-                  <LoggedItemCard key={item.id} item={item} onEditItem={onEditItem} />
+                  <LoggedItemCard
+                    key={item.id}
+                    item={item}
+                    onEditItem={(itemToEdit) => setEditingItem(itemToEdit)}
+                    onDeleteItem={onDeleteItem}
+                  />
                 ))}
               </div>
             )
@@ -116,6 +131,15 @@ export default function Dashboard({
           )}
         </div>
       </div>
+
+      {/* Edit Item Modal */}
+      <EditItemModal
+        item={editingItem}
+        isOpen={Boolean(editingItem)}
+        onClose={() => setEditingItem(null)}
+        onSave={onUpdateItem}
+        onDelete={onDeleteItem}
+      />
     </div>
   );
 }

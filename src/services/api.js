@@ -45,6 +45,16 @@ export const api = {
     return res.json();
   },
 
+  async updateItem(id, itemData) {
+    const res = await fetch(`${API_BASE}/items/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(itemData)
+    });
+    if (!res.ok) throw new Error('Failed to update item details');
+    return res.json();
+  },
+
   async flagItem(id, reason) {
     await fetch(`${API_BASE}/items/${id}/flag`, {
       method: 'PUT',

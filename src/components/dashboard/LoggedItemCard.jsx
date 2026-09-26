@@ -1,7 +1,7 @@
 import React from 'react';
 import { MapPin, Calendar } from 'lucide-react';
 
-export default function LoggedItemCard({ item, onEditItem }) {
+export default function LoggedItemCard({ item, onEditItem, onDeleteItem }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between relative font-sans">
       {/* Badge Actions Row */}
@@ -20,12 +20,24 @@ export default function LoggedItemCard({ item, onEditItem }) {
             {item.status}
           </span>
         </div>
-        <button
-          onClick={() => onEditItem(item)}
-          className="text-xs font-semibold text-[#C2410C] hover:text-[#9A3412] cursor-pointer"
-        >
-          Edit
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onEditItem(item)}
+            className="text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+          >
+            Edit
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(`Are you sure you want to delete "${item.title}"?`)) {
+                if (onDeleteItem) onDeleteItem(item.id);
+              }
+            }}
+            className="text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 px-2.5 py-1 rounded-md transition-colors cursor-pointer"
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       {/* Content Section */}

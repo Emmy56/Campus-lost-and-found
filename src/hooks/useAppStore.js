@@ -79,6 +79,7 @@ export function useAppStore() {
 
   const [activeConversationId, setActiveConversationId] = useState('');
   const [reportType, setReportType] = useState('lost');
+  const [dashboardSubTab, setDashboardSubTab] = useState('logged-items');
 
   useEffect(() => {
     localStorage.setItem('clf_items', JSON.stringify(items));
@@ -257,9 +258,18 @@ export function useAppStore() {
 
   const handleNotificationClick = (notif) => {
     setNotifications(prev => prev.map(n => n.id === notif.id ? { ...n, read: true } : n));
-    if (notif.linkTab) {
+    if (notif.type === 'match' || notif.linkTab === 'dashboard') {
+      setDashboardSubTab('matches');
+      setCurrentTab('dashboard');
+    } else if (notif.linkTab) {
       setCurrentTab(notif.linkTab);
     }
+  };
+
+  const handleUpdateItem = async (itemId, updatedData) => {
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, ...updatedData } : i));
+    await api.updateItem(itemId, updatedData).catch(() => {});
+    loadDbData();
   };
 
   const handleUpdateMatchStatus = async (matchId, status) => {
@@ -428,18 +438,57 @@ export function useAppStore() {
     await api.toggleBanUser(userId).catch(() => {});
   };
 
-  const handleOpenChat = (chatId) => {
+  const handleOpenChat = (chatId, match = null) => {
     setActiveConversationId(chatId);
-    setConversations(prev => prev.map(c => {
-      if (c.id === chatId) {
-        return {
-          ...c,
-          unreadCount: 0,
-          messages: (c.messages || []).map(m => ({ ...m, isRead: true }))
-        };
+    setConversations(prev => {
+      const exists = prev.some(c => c.id === chatId);
+      if (exists) {
+        return prev.map(c => {
+          if (c.id === chatId) {
+            return {
+              ...c,
+              unreadCount: 0,
+              messages: (c.messages || []).map(m => ({ ...m, isRead: true }))
+            };
+          }
+          return c;
+        });
       }
-      return c;
-    }));
+
+      // Dynamically create a distinct conversation for this match if not present yet
+      const targetMatch = match || matches.find(m => m.chatId === chatId || m.id === chatId);
+      const matchedItemTitle = targetMatch?.matchedItemTitle || targetMatch?.userItemTitle || 'Matched Item';
+      const partnerName = targetMatch?.finderName || targetMatch?.ownerName || 'Student Peer';
+      const partnerId = targetMatch?.matchedUserId || targetMatch?.userId || `user-peer-${Date.now()}`;
+
+      const newMatchConv = {
+        id: chatId,
+        matchId: targetMatch?.id || chatId,
+        title: `Re: ${matchedItemTitle}`,
+        unreadCount: 0,
+        lastMessageText: `Hi! Let's coordinate details regarding the matched item: ${matchedItemTitle}`,
+        lastMessageTime: 'Just now',
+        participants: [
+          {
+            id: partnerId,
+            name: partnerName,
+            online: false
+          }
+        ],
+        messages: [
+          {
+            id: 'msg-init-' + Date.now(),
+            senderId: 'system',
+            senderName: 'System',
+            text: `Match chat initiated for "${matchedItemTitle}". Coordinate meeting time & campus location safely.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isRead: true
+          }
+        ]
+      };
+
+      return [newMatchConv, ...prev];
+    });
     setCurrentTab('messages');
   };
 
@@ -533,6 +582,8 @@ export function useAppStore() {
     setActiveConversationId,
     reportType,
     setReportType,
+    dashboardSubTab,
+    setDashboardSubTab,
     stats,
     unreadMessagesCount,
     handleLogin,
@@ -540,6 +591,7 @@ export function useAppStore() {
     handleUpdateMatchStatus,
     handleSendMessage,
     handleAddReport,
+    handleUpdateItem,
     handleFlagItem,
     handleDismissFlag,
     handleRemoveItem,

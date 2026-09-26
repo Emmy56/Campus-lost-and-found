@@ -516,6 +516,17 @@ app.put('/api/items/:id/dismiss-flag', async (req, res) => {
   }
 });
 
+app.put('/api/items/:id', async (req, res) => {
+  try {
+    const itemId = req.params.id;
+    const updates = req.body;
+    await dbItems.update(itemId, updates);
+    res.json({ success: true, item: updates });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.delete('/api/items/:id', async (req, res) => {
   try {
     await dbItems.delete(req.params.id);
