@@ -558,7 +558,7 @@ export function useAppStore() {
     : validMatches.filter(m => m && (userItems || []).some(i => i && (i.id === m.userItemId || i.id === m.matchedItemId)));
 
   const userConversations = isUserAdmin
-    ? validConversations
+    ? []
     : validConversations.filter(c => c && ((userMatches || []).some(m => m && (m.chatId === c.id || m.id === c.matchId)) || (c.participants && c.participants.some(p => p && p.id === currentUser?.id))));
 
   const userNotifications = isUserAdmin

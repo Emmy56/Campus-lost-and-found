@@ -122,18 +122,20 @@ export default function Header({
                 />
               </div>
 
-              {/* Chat Icon */}
-              <button
-                onClick={() => onTabChange('messages')}
-                className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
-              >
-                <MessageSquare className="w-[22px] h-[22px]" />
-                {unreadMessagesCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 bg-blue-600 text-[10px] font-bold text-white rounded-full flex items-center justify-center border-2 border-white">
-                    {unreadMessagesCount}
-                  </span>
-                )}
-              </button>
+              {/* Chat Icon (Students only - Superadmin cannot view student direct messages) */}
+              {currentUser?.role !== 'admin' && (
+                <button
+                  onClick={() => onTabChange('messages')}
+                  className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                >
+                  <MessageSquare className="w-[22px] h-[22px]" />
+                  {unreadMessagesCount > 0 && (
+                    <span className="absolute top-1 right-1 w-4 h-4 bg-blue-600 text-[10px] font-bold text-white rounded-full flex items-center justify-center border-2 border-white">
+                      {unreadMessagesCount}
+                    </span>
+                  )}
+                </button>
+              )}
 
               {/* User Avatar & Profile Dropdown */}
               <div className="relative">

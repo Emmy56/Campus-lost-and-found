@@ -105,7 +105,11 @@ function MainApp() {
 
   const handleTabChange = (tab) => {
     if (tab === 'landing') {
-      setCurrentTab(currentUser ? 'dashboard' : 'signin');
+      setCurrentTab(currentUser ? (currentUser.role === 'admin' ? 'admin' : 'dashboard') : 'signin');
+      return;
+    }
+    if (currentUser?.role === 'admin' && tab === 'messages') {
+      setCurrentTab('admin');
       return;
     }
     if (!currentUser && protectedTabs.includes(tab)) {
@@ -155,7 +159,7 @@ function MainApp() {
             />
           )}
 
-          {activeTab === 'messages' && currentUser && (
+          {activeTab === 'messages' && currentUser && currentUser.role !== 'admin' && (
             <Messages
               currentUser={currentUser}
               users={users}
