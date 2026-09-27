@@ -133,10 +133,18 @@ export function useAppStore() {
 
             // Retain local optimistic messages that haven't been indexed/returned by backend API yet
             const fetchedMsgIds = new Set((fetchedC.messages || []).map(m => m.id));
-            const pendingOptimisticMsgs = (prevC.messages || []).filter(m => 
-              !fetchedMsgIds.has(m.id) && 
-              !(fetchedC.messages || []).some(fm => fm.text === m.text && fm.senderId === m.senderId && fm.timestamp === m.timestamp)
-            );
+            const pendingOptimisticMsgs = (prevC.messages || []).filter(m => {
+              if (!m || !m.id) return false;
+              if (fetchedMsgIds.has(m.id)) return false;
+
+              // Deduplicate by text content, image, and sender to prevent double message rendering
+              const isSameContent = (fetchedC.messages || []).some(fm =>
+                (fm.text || '') === (m.text || '') &&
+                (fm.image || '') === (m.image || '') &&
+                (fm.senderId === m.senderId || (fm.senderId === 'me' && m.senderId === currentUser?.id) || (m.senderId === 'me' && fm.senderId === currentUser?.id))
+              );
+              return !isSameContent;
+            });
 
             const mergedMsgs = [...(fetchedC.messages || []), ...pendingOptimisticMsgs];
             const lastMsg = mergedMsgs[mergedMsgs.length - 1];
@@ -303,9 +311,10 @@ export function useAppStore() {
     const senderName = currentUser?.name || 'Student';
     const senderId = currentUser?.id || 'me';
     
-    // Add message locally to conversations
+    // Add message locally to conversations with temporary optimistic ID
+    const tempMsgId = 'msg-opt-' + Date.now();
     const newMsg = {
-      id: 'msg-' + Date.now(),
+      id: tempMsgId,
       senderId: senderId,
       senderName: senderName,
       text: text || '',
@@ -326,7 +335,23 @@ export function useAppStore() {
       return c;
     }));
 
-    await api.sendMessage(conversationId, text, senderName, senderId, image).catch(() => {});
+    try {
+      const res = await api.sendMessage(conversationId, text, senderName, senderId, image);
+      if (res && (res.message || res.messageId)) {
+        const serverMsg = res.message || { ...newMsg, id: res.messageId };
+        setConversations(prev => prev.map(c => {
+          if (c.id === conversationId) {
+            return {
+              ...c,
+              messages: (c.messages || []).map(m => m.id === tempMsgId ? serverMsg : m)
+            };
+          }
+          return c;
+        }));
+      }
+    } catch (err) {
+      console.warn('[Store] Syncing sent message to API failed:', err);
+    }
   };
 
   const handleAddReport = async (itemData) => {
