@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { defaultUser, defaultAdmin } from '../data/mockData.js';
 import { api } from '../services/api.js';
 import { computeItemMatchScore } from '../utils/matchingEngine.js';
@@ -78,6 +78,11 @@ export function useAppStore() {
   });
 
   const [activeConversationId, setActiveConversationId] = useState('');
+  const activeConvIdRef = useRef(activeConversationId);
+  useEffect(() => {
+    activeConvIdRef.current = activeConversationId;
+  }, [activeConversationId]);
+
   const [reportType, setReportType] = useState('lost');
   const [dashboardSubTab, setDashboardSubTab] = useState('logged-items');
 
@@ -171,10 +176,11 @@ export function useAppStore() {
         setUsers(fetchedUsers);
       }
 
-      if (fetchedConvs && fetchedConvs.length > 0 && !activeConversationId) {
-        const convWithMsgs = fetchedConvs.find(c => c.messages && c.messages.length > 0);
-        if (convWithMsgs) {
-          setActiveConversationId(convWithMsgs.id);
+      if (fetchedConvs && fetchedConvs.length > 0 && !activeConvIdRef.current) {
+        const initialConv = fetchedConvs.find(c => c.messages && c.messages.length > 0) || fetchedConvs[0];
+        if (initialConv) {
+          setActiveConversationId(initialConv.id);
+          activeConvIdRef.current = initialConv.id;
         }
       }
     } catch (err) {
@@ -603,6 +609,7 @@ export function useAppStore() {
   const userConversations = isUserAdmin
     ? []
     : validConversations.filter(c => c && (
+        c.id === activeConversationId ||
         c.finderId === currentUser?.id ||
         c.loserId === currentUser?.id ||
         (userMatches || []).some(m => m && (m.chatId === c.id || m.id === c.matchId)) ||
