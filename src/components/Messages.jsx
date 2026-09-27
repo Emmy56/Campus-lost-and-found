@@ -22,15 +22,13 @@ export default function Messages({
   const chatContainerRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Filter conversations to only include those that have at least 1 message sent or received
-  const conversationsWithMessages = conversations.filter(c => c.messages && c.messages.length > 0);
+  // Active conversation is explicitly selected by ID (e.g. from Message Finder) or defaults to first conversation
+  const activeConversation = conversations.find(c => c.id === activeConversationId) || conversations[0];
 
-  // Active conversation is explicitly selected by ID (e.g. from Message Finder) or defaults to first with messages
-  const activeConversation = conversations.find(c => c.id === activeConversationId) || conversationsWithMessages[0];
-
-  // Filter left-hand conversation column based on search query
-  const filteredConversations = conversationsWithMessages.filter(c => 
+  // Filter left-hand conversation column based on search query (showing all conversations)
+  const filteredConversations = conversations.filter(c => 
     (c.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (c.finderName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
     (c.participants && c.participants.some(p => (p.name || '').toLowerCase().includes(searchQuery.toLowerCase())))
   );
 

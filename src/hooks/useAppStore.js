@@ -120,31 +120,39 @@ export function useAppStore() {
         setConversations(prevConvs => {
           if (!prevConvs || prevConvs.length === 0) return fetchedConvs;
 
-          return fetchedConvs.map(fetchedC => {
+          const fetchedMap = new Map(fetchedConvs.map(c => [c.id, c]));
+
+          const merged = fetchedConvs.map(fetchedC => {
             const prevC = prevConvs.find(p => p.id === fetchedC.id);
-            if (!prevC || !prevC.messages || prevC.messages.length === 0) return fetchedC;
+            if (!prevC || !prevC.messages || prevC.messages.length === 0) return { ...prevC, ...fetchedC };
 
             // Retain local optimistic messages that haven't been indexed/returned by backend API yet
             const fetchedMsgIds = new Set((fetchedC.messages || []).map(m => m.id));
-            const pendingOptimisticMsgs = prevC.messages.filter(m => 
+            const pendingOptimisticMsgs = (prevC.messages || []).filter(m => 
               !fetchedMsgIds.has(m.id) && 
               !(fetchedC.messages || []).some(fm => fm.text === m.text && fm.senderId === m.senderId && fm.timestamp === m.timestamp)
             );
-
-            if (pendingOptimisticMsgs.length === 0) {
-              return fetchedC;
-            }
 
             const mergedMsgs = [...(fetchedC.messages || []), ...pendingOptimisticMsgs];
             const lastMsg = mergedMsgs[mergedMsgs.length - 1];
 
             return {
+              ...prevC,
               ...fetchedC,
               messages: mergedMsgs,
-              lastMessageText: lastMsg?.text || (lastMsg?.image ? '📷 Sent an image' : fetchedC.lastMessageText),
-              lastMessageTime: lastMsg?.timestamp || fetchedC.lastMessageTime
+              lastMessageText: lastMsg?.text || (lastMsg?.image ? '📷 Sent an image' : (fetchedC.lastMessageText || prevC.lastMessageText)),
+              lastMessageTime: lastMsg?.timestamp || fetchedC.lastMessageTime || prevC.lastMessageTime
             };
           });
+
+          // Retain local client-side conversations that backend API hasn't returned yet
+          for (const prevC of prevConvs) {
+            if (prevC && !fetchedMap.has(prevC.id)) {
+              merged.push(prevC);
+            }
+          }
+
+          return merged;
         });
       }
 
@@ -521,6 +529,8 @@ export function useAppStore() {
         createdAt: new Date().toISOString()
       };
 
+      api.createConversation(newMatchConv).catch(() => {});
+
       return [newMatchConv, ...prev];
     });
     setCurrentTab('messages');
@@ -567,6 +577,8 @@ export function useAppStore() {
       ],
       createdAt: new Date().toISOString()
     };
+
+    api.createConversation(newConversation).catch(() => {});
 
     setConversations(prev => [newConversation, ...prev]);
     setActiveConversationId(chatId);

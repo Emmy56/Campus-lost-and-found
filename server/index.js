@@ -414,7 +414,7 @@ app.put('/api/matches/:id/status', async (req, res) => {
   }
 });
 
-// 7. Get Conversations & Messages
+// 7. Get & Create Conversations
 app.get('/api/conversations', async (req, res) => {
   try {
     const conversations = await dbConversations.getAll();
@@ -451,6 +451,39 @@ app.get('/api/conversations', async (req, res) => {
   }
 });
 
+app.post('/api/conversations', async (req, res) => {
+  try {
+    const convData = req.body;
+    if (!convData || !convData.id) {
+      return res.status(400).json({ error: 'Conversation id is required' });
+    }
+    const all = await dbConversations.getAll();
+    const existing = all.find(c => c.id === convData.id);
+    if (existing) {
+      return res.json(existing);
+    }
+    const newConv = {
+      id: convData.id,
+      matchId: convData.matchId || '',
+      title: convData.title || 'Match Conversation',
+      lastMessageText: convData.lastMessageText || '',
+      lastMessageTime: convData.lastMessageTime || 'Just now',
+      unreadCount: 0,
+      finderId: convData.finderId || '',
+      finderName: convData.finderName || '',
+      loserId: convData.loserId || '',
+      loserName: convData.loserName || '',
+      participants: convData.participants || [],
+      messages: convData.messages || [],
+      createdAt: new Date().toISOString()
+    };
+    await dbConversations.create(newConv);
+    res.json(newConv);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // 8. Send Chat Message
 app.post('/api/conversations/:id/messages', async (req, res) => {
   try {
@@ -473,10 +506,28 @@ app.post('/api/conversations/:id/messages', async (req, res) => {
 
     await dbMessages.create(newMsg);
 
-    await dbConversations.update(conversationId, {
-      lastMessageText: text || (image ? '📷 Sent an image' : ''),
-      lastMessageTime: 'Just now'
-    });
+    // Auto-ensure conversation exists in db if not present
+    const conversations = await dbConversations.getAll();
+    const existing = conversations.find(c => c.id === conversationId);
+    if (!existing) {
+      await dbConversations.create({
+        id: conversationId,
+        title: `Conversation`,
+        lastMessageText: text || (image ? '📷 Sent an image' : ''),
+        lastMessageTime: 'Just now',
+        unreadCount: 0,
+        participants: [
+          { id: senderId || 'me', name: senderName || 'Student', online: true }
+        ],
+        messages: [newMsg],
+        createdAt: new Date().toISOString()
+      });
+    } else {
+      await dbConversations.update(conversationId, {
+        lastMessageText: text || (image ? '📷 Sent an image' : ''),
+        lastMessageTime: 'Just now'
+      });
+    }
 
     res.json({ success: true, messageId: userMsgId, message: newMsg });
   } catch (err) {

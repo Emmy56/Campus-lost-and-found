@@ -93,6 +93,16 @@ export const api = {
     return res.json();
   },
 
+  async createConversation(convData) {
+    const res = await fetch(`${API_BASE}/conversations`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(convData)
+    });
+    if (!res.ok) throw new Error('Failed to create conversation');
+    return res.json();
+  },
+
   async sendMessage(conversationId, text, senderName, senderId, image = null) {
     await fetch(`${API_BASE}/conversations/${conversationId}/messages`, {
       method: 'POST',
