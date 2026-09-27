@@ -127,12 +127,11 @@ export default function Header({
                 <button
                   onClick={() => onTabChange('messages')}
                   className="relative p-2 text-gray-700 hover:bg-gray-100 rounded-full transition-colors cursor-pointer"
+                  title="Messages"
                 >
                   <MessageSquare className="w-[22px] h-[22px]" />
                   {unreadMessagesCount > 0 && (
-                    <span className="absolute top-1 right-1 w-4 h-4 bg-blue-600 text-[10px] font-bold text-white rounded-full flex items-center justify-center border-2 border-white">
-                      {unreadMessagesCount}
-                    </span>
+                    <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-red-500 rounded-full border border-white ring-1 ring-white shadow-sm" />
                   )}
                 </button>
               )}
