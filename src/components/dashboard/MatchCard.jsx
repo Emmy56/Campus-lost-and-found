@@ -50,6 +50,13 @@ export default function MatchCard({
           <MapPin className="w-3.5 h-3.5 text-gray-400" />
           <span>{matchedLocation}</span>
         </div>
+        <div className="mt-2 pt-2 border-t border-gray-100/80 flex items-center justify-between">
+          <span className="text-[10px] font-bold text-blue-700 bg-blue-50/80 px-2 py-0.5 rounded border border-blue-100">
+            {isFinder
+              ? `Owner: ${match.loserName || 'Student Owner'}`
+              : `Finder: ${match.finderName || 'Student Finder'}`}
+          </span>
+        </div>
       </div>
 
       {/* Action States */}
@@ -57,7 +64,7 @@ export default function MatchCard({
         {match.status === 'pending' && (
           <>
             <button
-              onClick={() => onOpenChat(match.chatId, match)}
+              onClick={() => onOpenChat(match.chatId || match.id, match)}
               className="px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
             >
               <MessageSquare className="w-3.5 h-3.5" />

@@ -375,37 +375,60 @@ export function useAppStore() {
     // ONLY generate a match if an actual matching opposite item exists with score >= 60
     if (bestMatchItem && highestScore >= 60) {
       const mockMatchId = 'match-' + Date.now();
-      const mockChatId = 'chat-' + Date.now();
+      const mockChatId = 'chat-match-' + mockMatchId;
+
+      const isNewItemLost = newItem.type === 'lost';
+      
+      const finderUserId = isNewItemLost ? (bestMatchItem.userId || 'user-finder') : (currentUser?.id || 'guest');
+      const finderNameStr = isNewItemLost ? (bestMatchItem.loggedBy || 'Student Finder') : authorStr;
+      
+      const loserUserId = isNewItemLost ? (currentUser?.id || 'guest') : (bestMatchItem.userId || 'user-loser');
+      const loserNameStr = isNewItemLost ? authorStr : (bestMatchItem.loggedBy || 'Student Loser');
+
+      const foundItemTitle = isNewItemLost ? bestMatchItem.title : newItem.title;
 
       const newMatch = {
+        id: mockMatchId,
+        chatId: mockChatId,
+        userItemId: newItem.id,
+        userItemTitle: newItem.title,
+        matchedItemId: bestMatchItem.id,
         matchedItemTitle: bestMatchItem.title,
         matchedItemType: bestMatchItem.type === 'lost' ? 'Lost Item' : 'Found Item',
         matchedItemLocation: bestMatchItem.location,
         matchPercentage: highestScore,
         status: 'pending',
-        finderName: 'Student Peer',
-        userItemId: newItem.id,
-        matchedItemId: bestMatchItem.id,
-        chatId: mockChatId,
-        id: mockMatchId,
+        finderName: finderNameStr,
+        finderId: finderUserId,
+        loserName: loserNameStr,
+        loserId: loserUserId,
         createdAt: new Date().toISOString()
       };
 
       const newConv = {
-        title: `Re: ${newItem.title}`,
+        id: mockChatId,
+        matchId: mockMatchId,
+        userItemId: newItem.id,
+        matchedItemId: bestMatchItem.id,
+        finderId: finderUserId,
+        finderName: finderNameStr,
+        loserId: loserUserId,
+        loserName: loserNameStr,
+        title: `Finder: ${finderNameStr} (${foundItemTitle})`,
         lastMessageText: '',
         lastMessageTime: 'Just now',
-        matchId: mockMatchId,
         unreadCount: 0,
-        participants: [{ id: bestMatchItem.userId || 'user-peer', name: 'Student Peer', online: false }],
+        participants: [
+          { id: finderUserId, name: finderNameStr, role: 'finder', online: false },
+          { id: loserUserId, name: loserNameStr, role: 'loser', online: false }
+        ],
         messages: [],
-        id: mockChatId,
         createdAt: new Date().toISOString()
       };
 
       const newNotif = {
         title: 'Match Detected!',
-        message: `Your report "${newItem.title}" has a ${highestScore}% match with "${bestMatchItem.title}".`,
+        message: `Your report "${newItem.title}" has a ${highestScore}% match with "${bestMatchItem.title}" found by ${finderNameStr}.`,
         userId: currentUser?.id || 'guest',
         type: 'match',
         timestamp: new Date().toISOString(),
@@ -462,36 +485,40 @@ export function useAppStore() {
         });
       }
 
-      // Dynamically create a distinct conversation for this match if not present yet
+      // Dynamically create a distinct conversation specifically for this match and finder
       const targetMatch = match || matches.find(m => m.chatId === chatId || m.id === chatId);
-      const matchedItemTitle = targetMatch?.matchedItemTitle || targetMatch?.userItemTitle || 'Matched Item';
-      const partnerName = targetMatch?.finderName || targetMatch?.ownerName || 'Student Peer';
-      const partnerId = targetMatch?.matchedUserId || targetMatch?.userId || `user-peer-${Date.now()}`;
+      const finderName = targetMatch?.finderName || 'Student Finder';
+      const finderId = targetMatch?.finderId || `user-finder-${Date.now()}`;
+      const loserName = targetMatch?.loserName || currentUser?.name || 'Student Peer';
+      const loserId = targetMatch?.loserId || currentUser?.id || 'user-loser';
+      const matchedTitle = targetMatch?.matchedItemTitle || targetMatch?.userItemTitle || 'Matched Item';
 
       const newMatchConv = {
         id: chatId,
         matchId: targetMatch?.id || chatId,
-        title: `Re: ${matchedItemTitle}`,
+        title: `Finder: ${finderName} (${matchedTitle})`,
         unreadCount: 0,
-        lastMessageText: `Hi! Let's coordinate details regarding the matched item: ${matchedItemTitle}`,
+        lastMessageText: `Hi! Direct chat initiated with finder ${finderName} regarding: ${matchedTitle}`,
         lastMessageTime: 'Just now',
+        finderId: finderId,
+        finderName: finderName,
+        loserId: loserId,
+        loserName: loserName,
         participants: [
-          {
-            id: partnerId,
-            name: partnerName,
-            online: false
-          }
+          { id: finderId, name: finderName, role: 'finder', online: false },
+          { id: loserId, name: loserName, role: 'loser', online: false }
         ],
         messages: [
           {
             id: 'msg-init-' + Date.now(),
             senderId: 'system',
             senderName: 'System',
-            text: `Match chat initiated for "${matchedItemTitle}". Coordinate meeting time & campus location safely.`,
+            text: `Dedicated private conversation created exclusively with Finder "${finderName}" for "${matchedTitle}".`,
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             isRead: true
           }
-        ]
+        ],
+        createdAt: new Date().toISOString()
       };
 
       return [newMatchConv, ...prev];
@@ -505,36 +532,40 @@ export function useAppStore() {
       return;
     }
 
-    const chatId = `chat-find-${item.id}`;
+    const chatId = `chat-finder-${item.id}-${currentUser.id}`;
     const existing = conversations.find(c => c.id === chatId);
     if (existing) {
       handleOpenChat(chatId);
       return;
     }
 
+    const finderName = item.loggedBy || 'Student Finder';
+    const finderId = item.userId || `user-finder-${Date.now()}`;
+
     const newConversation = {
       id: chatId,
-      title: `Re: ${item.title}`,
+      title: `Finder: ${finderName} (${item.title})`,
       unreadCount: 0,
-      lastMessageText: `Hi! I'm interested in coordinating details about: ${item.title}`,
+      lastMessageText: `Hi ${finderName}! I saw your item listing: ${item.title}`,
       lastMessageTime: 'Just now',
+      finderId: finderId,
+      finderName: finderName,
+      loserId: currentUser?.id,
+      loserName: currentUser?.name,
       participants: [
-        {
-          id: item.userId,
-          name: 'Student Partner',
-          avatar: '',
-          online: false
-        }
+        { id: finderId, name: finderName, role: 'finder', online: false },
+        { id: currentUser.id, name: currentUser.name || 'Student', role: 'loser', online: true }
       ],
       messages: [
         {
           id: 'msg-con-' + Date.now(),
-          senderId: 'me',
+          senderId: currentUser?.id || 'me',
           senderName: currentUser?.name || 'Student',
-          text: `Hi! I saw your report about the ${item.title} at ${item.location}. I'd like to check if this is the correct item. Let me know when you're available to meet up!`,
+          text: `Hi ${finderName}! I saw your report about "${item.title}" at ${item.location}. I'd like to check if this is the correct item. Let me know when you're available to meet up!`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
-      ]
+      ],
+      createdAt: new Date().toISOString()
     };
 
     setConversations(prev => [newConversation, ...prev]);
@@ -559,7 +590,12 @@ export function useAppStore() {
 
   const userConversations = isUserAdmin
     ? []
-    : validConversations.filter(c => c && ((userMatches || []).some(m => m && (m.chatId === c.id || m.id === c.matchId)) || (c.participants && c.participants.some(p => p && p.id === currentUser?.id))));
+    : validConversations.filter(c => c && (
+        c.finderId === currentUser?.id ||
+        c.loserId === currentUser?.id ||
+        (userMatches || []).some(m => m && (m.chatId === c.id || m.id === c.matchId)) ||
+        (c.participants && c.participants.some(p => p && (p.id === currentUser?.id || p.id === 'me')))
+      ));
 
   const userNotifications = isUserAdmin
     ? validNotifications

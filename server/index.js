@@ -290,17 +290,31 @@ app.post('/api/items', async (req, res) => {
     // Only generate a match if an actual opposite item matches with similarity >= 60%
     if (bestMatch && highestScore >= 60) {
       const mockMatchId = 'match-' + Date.now();
-      const mockChatId = 'chat-new-' + Date.now();
+      const mockChatId = 'chat-match-' + mockMatchId;
+
+      const isNewItemLost = type === 'lost';
+      
+      const finderUserId = isNewItemLost ? (bestMatch.userId || 'user-finder') : (userId || 'guest');
+      const finderNameStr = isNewItemLost ? (bestMatch.loggedBy || 'Student Finder') : authorName;
+      
+      const loserUserId = isNewItemLost ? (userId || 'guest') : (bestMatch.userId || 'user-loser');
+      const loserNameStr = isNewItemLost ? authorName : (bestMatch.loggedBy || 'Student Loser');
+
+      const foundItemTitle = isNewItemLost ? bestMatch.title : title;
 
       const newMatch = {
+        userItemId: itemId,
+        userItemTitle: title,
+        matchedItemId: bestMatch.id,
         matchedItemTitle: bestMatch.title,
         matchedItemType: bestMatch.type === 'lost' ? 'Lost Item' : 'Found Item',
         matchedItemLocation: bestMatch.location,
         matchPercentage: highestScore,
         status: 'pending',
-        finderName: 'Student Peer',
-        userItemId: itemId,
-        matchedItemId: bestMatch.id,
+        finderName: finderNameStr,
+        finderId: finderUserId,
+        loserName: loserNameStr,
+        loserId: loserUserId,
         chatId: mockChatId,
         id: mockMatchId,
         createdAt: new Date().toISOString()
@@ -308,12 +322,23 @@ app.post('/api/items', async (req, res) => {
       await dbMatches.create(newMatch);
 
       const newConv = {
-        title: `Re: ${title}`,
+        id: mockChatId,
+        matchId: mockMatchId,
+        userItemId: itemId,
+        matchedItemId: bestMatch.id,
+        finderId: finderUserId,
+        finderName: finderNameStr,
+        loserId: loserUserId,
+        loserName: loserNameStr,
+        title: `Finder: ${finderNameStr} (${foundItemTitle})`,
         lastMessageText: '',
         lastMessageTime: 'Just now',
-        matchId: mockMatchId,
         unreadCount: 0,
-        id: mockChatId,
+        participants: [
+          { id: finderUserId, name: finderNameStr, role: 'finder', online: false },
+          { id: loserUserId, name: loserNameStr, role: 'loser', online: false }
+        ],
+        messages: [],
         createdAt: new Date().toISOString()
       };
       await dbConversations.create(newConv);
@@ -321,7 +346,7 @@ app.post('/api/items', async (req, res) => {
       const notifId = 'notif-' + Date.now();
       const newNotif = {
         title: 'Match Detected!',
-        message: `Your report "${title}" has a ${highestScore}% match with "${bestMatch.title}".`,
+        message: `Your report "${title}" has a ${highestScore}% match with "${bestMatch.title}" found by ${finderNameStr}.`,
         userId: userId || 'guest',
         type: 'match',
         timestamp: new Date().toISOString(),
@@ -400,9 +425,16 @@ app.get('/api/conversations', async (req, res) => {
       lastMessageText: c.lastMessageText || '',
       lastMessageTime: c.lastMessageTime || '',
       matchId: c.matchId,
+      finderId: c.finderId,
+      finderName: c.finderName,
+      loserId: c.loserId,
+      loserName: c.loserName,
       participants: c.participants && c.participants.length > 0
         ? c.participants.map(p => ({ ...p, online: Boolean(p.online) }))
-        : [{ id: 'user-peer', name: 'Student Peer', online: false }],
+        : [
+            { id: c.finderId || 'user-finder', name: c.finderName || 'Student Finder', role: 'finder', online: false },
+            { id: c.loserId || 'user-loser', name: c.loserName || 'Student Loser', role: 'loser', online: false }
+          ],
       messages: (c.messages || []).map(m => ({
         id: m.id,
         senderId: m.senderId,

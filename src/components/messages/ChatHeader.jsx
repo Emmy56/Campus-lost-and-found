@@ -28,11 +28,16 @@ export default function ChatHeader({
           )}
         </div>
         <div>
-          <h3 className="font-bold text-gray-900 text-sm leading-tight">
-            {conversation.title}
-          </h3>
-          <p className="text-[11px] text-gray-400 font-medium mt-0.5">
-            {isOnline ? 'Online' : 'Offline'}
+          <div className="flex items-center gap-2">
+            <h3 className="font-bold text-gray-900 text-sm leading-tight">
+              {conversation.title}
+            </h3>
+            <span className="px-2 py-0.5 bg-blue-50 text-blue-700 text-[10px] font-bold rounded border border-blue-100 uppercase">
+              Finder Channel
+            </span>
+          </div>
+          <p className="text-[11px] text-gray-500 font-medium mt-0.5">
+            Private 1-on-1 chat with {conversation.finderName && conversation.loserId === currentUser?.id ? `Finder: ${conversation.finderName}` : (partner?.name || 'Student Peer')} • {isOnline ? 'Online' : 'Offline'}
           </p>
         </div>
       </div>

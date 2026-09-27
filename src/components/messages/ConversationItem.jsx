@@ -42,11 +42,15 @@ export default function ConversationItem({
             {conversation.lastMessageTime}
           </span>
         </div>
-        <p className="text-xs text-gray-400 font-medium truncate mt-0.5">
-          {partner?.name || 'Student'}
-        </p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-xs text-blue-700 font-bold truncate">
+            {conversation.finderName && conversation.loserId === currentUser?.id
+              ? `Finder: ${conversation.finderName}`
+              : (partner?.name ? `Participant: ${partner.name}` : 'Student Peer')}
+          </span>
+        </div>
         <p className="text-xs text-gray-600 truncate mt-1 leading-normal">
-          {conversation.lastMessageText}
+          {conversation.lastMessageText || 'No messages sent yet.'}
         </p>
       </div>
 
